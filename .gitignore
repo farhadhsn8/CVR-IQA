@@ -1,0 +1,22 @@
+*.tar
+
+*.jpg
+*.jpeg
+*.png
+*.bmp
+*.BMP
+*.zip
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
+*.rar
+*.npy
+
+*.pt
+*.ptc
+*.pth
+=======
+*.rar
+>>>>>>> Stashed changes
+=======
+*.rar
+>>>>>>> Stashed changes

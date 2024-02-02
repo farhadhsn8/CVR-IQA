@@ -1,0 +1,247 @@
+TAMPERE IMAGE DATABASE 2013 TID2013, version 1.0
+
+TID2013 is intended for evaluation of full-reference image visual 
+quality assessment metrics. TID2013 allows estimating how a given 
+metric corresponds to mean human perception. For example, in 
+accordance with TID2013, Spearman correlation between the metric 
+PSNR (Peak Signal to Noise Ratio) and mean human perception (MOS, 
+Mean Opinion Score) is 0.69.
+
+Permission to use, copy, or modify this database and its documentation
+for educational and research purposes only and without fee is hereby
+granted, provided that this copyright notice and the original authors'
+names appear on all copies and supporting documentation. This database
+shall not be modified without first obtaining permission of the authors. 
+The authors make no representations about the suitability of this 
+database for any purpose. It is provided "as is" without express
+or implied warranty.
+
+In case of publishing results obtained by means of TID2013 please refer 
+to one of the following papers (see files tid2013.pdf and euvip_tid2013.pdf 
+in the "papers\" direcory):
+  
+[1] N. Ponomarenko, L. Jin, O. Ieremeiev, V. Lukin, K. Egiazarian, J. Astola, 
+B. Vozel, K. Chehdi, M. Carli, F. Battisti, C.-C. Jay Kuo, 
+Image database TID2013: Peculiarities, results and perspectives, 
+Signal Processing: Image Communication, vol. 30, Jan. 2015, pp. 57-77.
+
+[2] N. Ponomarenko, O. Ieremeiev, V. Lukin, K. Egiazarian, L. Jin, J. Astola, 
+B. Vozel, K. Chehdi, M. Carli, F. Battisti, C.-C. Jay Kuo, 
+Color Image Database TID2013: Peculiarities and Preliminary Results,  
+Proceedings of 4th Europian Workshop on Visual Information Processing EUVIP2013, Paris,
+France, June 10-12, 2013, pp. 106-111.
+
+[3] N. Ponomarenko, O. Ieremeiev, V. Lukin, K. Egiazarian, L. Jin, J. Astola, 
+B. Vozel, K. Chehdi, M. Carli, F. Battisti, C.-C. Jay Kuo, 
+A New Color Image Database TID2013: Innovations and Results, 
+Proceedings of ACIVS, Poznan, Poland, Oct. 2013, pp. 402-413.
+
+The TID2008 contains 25 reference images and 3000 distorted images 
+(25 reference images x 24 types of distortions x 5 levels of distortions). 
+All images are saved in database in Bitmap format without any compression. 
+File names are organized in such a manner that they indicate a number of 
+the reference image, then a number of distortion's type, and, finally, a 
+number of distortion's level: "iXX_YY_Z.bmp". 
+
+For example, the name "i03_08_4.bmp" means the 3-rd reference image corrupted 
+by the 8-th type of distortions with the 4-th level of this distortion.
+Similarly, the name "i12_10_1.bmp" means that this is the 12-th reference 
+image corrupted by the 10-th type of distortion with the first level. 
+"i17.bmp" means that this is non-distorted 17-th reference image.
+
+TABLE I. Types of distortion used in TID2008
+
+ü       Type of distortion        
+
+1       Additive Gaussian noise
+2       Additive noise in color components is more intensive than additive noise in the luminance component
+3       Spatially correlated noise
+4       Masked noise
+5       High frequency noise
+6       Impulse noise
+7       Quantization noise
+8       Gaussian blur
+9       Image denoising
+10      JPEG compression
+11      JPEG2000 compression
+12      JPEG transmission errors
+13      JPEG2000 transmission errors
+14      Non eccentricity pattern noise
+15      Local block-wise distortions of different intensity
+16      Mean shift (intensity shift)
+17      Contrast change
+18      Change of color saturation
+19      Multiplicative Gaussian noise
+20      Comfort noise
+21      Lossy compression of noisy images
+22      Image color quantization with dither
+23      Chromatic aberrations
+24      Sparse sampling and reconstruction
+
+See [1] for a more detailed explanation.
+
+The file "mos.txt" contains the Mean Opinion Score for each distorted image.
+The file "mos_with_names.txt" contains the same information and filenames of 
+                              the coressponding distorted images.
+The file "mos_std.txt" contains standard deviation of MOS for each 
+                       distorted image.
+
+The MOS was obtained from the results of 971 experiments carried out by 
+observers from five countries: Finland, France, Italy, Ukraine and USA 
+(116 experiments have been carried out in Finland, 72 in France, 80 in Italy, 
+602 in Ukraine, and 101 in USA). Totally, the 971 observers have 
+performed 524340 comparisons of visual quality of distorted images 
+or 1048680 evaluations of relative visual quality in image pairs.
+
+Higer value of MOS (0 - minimal, 9 - maximal) corresponds to higer visual 
+quality of the image.
+
+The following files contain values of some quality metrics calculated for 
+the TID2008 images:
+
+"psnrc.txt" - peak signal to noise ratio;
+"psnr.txt" - peak signal to noise ratio calculated for the luminance component;
+"ssim.txt" - values of the SSIM metric [3];
+"mssim.txt" - vaules of the MSSIM metric [4,2];
+"psnrhvs.txt" - values of the PSNR-HVS metric [5];
+"psnrhvsm.txt" - values of the PSNR-HVS-M metric [6];
+"psnrha.txt" - values of the PSNRHA metric [7];
+"psnrhma.txt" - values of the PSNRHMA metric [7];
+"vifp.txt" - pixel domain version VIF [8,3];
+"nqm.txt" - values of the NQM metric [9,3];
+"wsnr.txt" - values of the WSNR metric [10,3];
+"vsnr.txt" - values of the VSNR metric [11,3];
+"fsim.txt" - values of the FSIM metric [12];
+"fsimc.txt" - values of color version of FSIM metric [12];
+
+[2] Matthew Gaubatz, "Metrix MUX Visual Quality Assessment Package: MSE, 
+    PSNR, SSIM, MSSIM, VSNR, VIF, VIFP, UQI, IFC, NQM, WSNR, SNR", 
+    http://foulard.ece.cornell.edu/gaubatz/metrix_mux/
+[3] Z. Wang, A. Bovik, H. Sheikh, E. Simoncelli, "Image quality assessment: 
+    from error visibility to structural similarity", IEEE Transactions on 
+    Image Proc., vol. 13, issue 4, pp. 600-612, April, 2004.
+[4] Z. Wang, E. P. Simoncelli and A. C. Bovik, "Multi-scale structural 
+    similarity for image quality assessment," Invited Paper, IEEE Asilomar 
+    Conference on Signals, Systems and Computers, Nov. 2003.
+[5] K. Egiazarian, J. Astola, N. Ponomarenko, V. Lukin, F. Battisti, 
+    M. Carli, "New full-reference quality metrics based on HVS", CD-ROM 
+    Proceedings of the Second International Workshop on Video Processing 
+    and Quality Metrics, Scottsdale, USA, 2006, 4 p.
+[6] N. Ponomarenko, F. Silvestri, K. Egiazarian, M. Carli, J. Astola, 
+     V. Lukin "On between-coefficient contrast masking of DCT basis 
+     functions", CD-ROM Proc. of the Third International Workshop on Video 
+     Processing and Quality Metrics. - USA, 2007. - 4 p.
+[7] N. Ponomarenko, O. Eremeev, Lukin V., K. Egiazarian, M. Carli, "Modified 
+    image visual quality metrics for contrast change and mean shift 
+    accounting", Proceedings of CADSM, Polyana-Svalyava, 2011, pp. 305-311.
+[8] H.R. Sheikh.and A.C. Bovik, "Image information and visual quality," 
+     IEEE Transactions on Image Processing, Vol.15, no.2, 2006, pp. 430-444. 
+[9] Damera-Venkata N., Kite T., Geisler W., Evans B. and Bovik A. "Image 
+     Quality Assessment Based on a Degradation Model", IEEE Trans. on Image 
+     Processing, Vol. 9, 2000, pp. 636-650.
+[10] T. Mitsa and K. Varkur, "Evaluation of contrast sensitivity functions 
+     for the formulation of quality measures incorporated in halftoning 
+     algorithms", ICASSP '93-V, pp. 301-304.
+[11] D.M. Chandler, S.S. Hemami, "VSNR: A Wavelet-Based Visual Signal-to-Noise 
+     Ratio for Natural Images", IEEE Transactions on Image Processing, 
+     Vol. 16 (9), pp. 2284-2298, 2007.
+[12] L. Zhang, X. Mou, D. Zhang, "FSIM: a feature similarity index for 
+     image quality assessment", IEEE Transactions on Image Processing, vol. 20, 
+     No 5, 2011, pp. 2378--2386.
+
+The programs "spearman.exe" and "kendall.exe" calculate values of Spearman
+and Kendall rank correlations for entire set of the TID2008 images as well 
+as for particular subsets given in the Table II.        
+
+TABLE II. Subsets of TID2013 definded by default
+
+ü  Type of distortion          Noise Actual Simple Exotic New Color Full
+
+1  Additive Gaussian noise       +     +       +      -    -    -    +
+2  Noise in color comp.          +     -       -      -    -    +    +
+3  Spatially correl. noise       +     +       -      -    -    -    +
+4  Masked noise                  +     +       -      -    -    -    +
+5  High frequency noise          +     +       -      -    -    -    +
+6  Impulse noise                 +     +       -      -    -    -    +
+7  Quantization noise            +     -       -      -    -    +    +
+8  Gaussian blur                 +     +       +      -    -    -    +
+9  Image denoising               +     +       -      -    -    -    +
+10 JPEG compression              -     +       +      -    -    +    +
+11 JPEG2000 compression          -     +       -      -    -    -    +
+12 JPEG transm. errors           -     -       -      +    -    -    +
+13 JPEG2000 transm. errors       -     -       -      +    -    -    +
+14 Non ecc. patt. noise          -     -       -      +    -    -    +
+15 Local block-wise dist.        -     -       -      +    -    -    +
+16 Mean shift                    -     -       -      +    -    -    +
+17 Contrast change               -     -       -      +    -    -    +
+18 Change of color saturation    -     -       -      -    +    +    +
+19 Multipl. Gauss. noise         +     +       -      -    +    -    +
+20 Comfort noise                 -     -       -      +    +    -    +
+21 Lossy compr. of noisy images  +     +       -      -    +    -    +
+22 Image color quant. w. dither  -     -       -      -    +    +    +
+23 Chromatic aberrations         -     -       -      +    +    +    +
+24 Sparse sampl. and reconstr.   -     -       -      +    +    -    +
+
+The command line is "spearman <data1> <data2>" or "kendall <data1> <data2>".
+
+Command line examples:
+
+spearman mos.txt ssim.txt
+kendall psnr.txt psnr-hvs.txt
+
+An example of usage:
+
+kendall.exe mos.txt FSIMc.txt
+Noise  : 0.722
+Actual : 0.742
+Simple : 0.792
+Exotic : 0.651
+New    : 0.611
+Color  : 0.592
+Full   : 0.666
+
+TABLE III. Ranking of compared metrics in accordance with 
+           Spearman correlation with MOS  
+Rank   Measure    Spearman correlation
+ 1      FSIMc           0.851
+ 2      PSNR-HA         0.819
+ 3      PSNR-HMA        0.813
+ 4      FSIM            0.801
+ 5      MSSIM           0.787
+ 6      PSNRc           0.687
+ 7      VSNR            0.681
+ 8      PSNR-HVS        0.654
+ 9      PSNR            0.640
+ 10     SSIM            0.637
+ 11     NQM             0.635
+ 12     PSNR-HVS-M      0.625
+ 13     VIFP            0.608
+ 14     WSNR            0.580
+
+TABLE IV. Ranking of compared metrics in accordance with 
+          Kendall correlation with MOS  
+Rank   Measure    Kendall correlation
+ 1      FSIMc           0.667
+ 2      PSNR-HA         0.643
+ 3      PSNR-HMA        0.632
+ 4      FSIM            0.630
+ 5      MSSIM           0.608
+ 6      VSNR            0.508
+ 7      PSNR-HVS        0.508
+ 8      PSNRc           0.496
+ 9      PSNR-HVS-M      0.482
+ 10     PSNR            0.470
+ 11     NQM             0.466
+ 12     SSIM            0.464
+ 13     VIFP            0.457
+ 14     WSNR            0.446
+
+We plan to regularly update the versions of this database. New versions 
+will include new types of distortion and take into account results of 
+additional experiments.
+
+We will highly appreciate authors of other metrics if they will inform 
+us (please, mail to nikolay@ponomarenko.info) how to get executable 
+files (e.g., Matlab codes) of their metrics. We guarantee that we 
+will not pass them to other users and will include future results 
+obtained for such metrics in analysis for our database.
