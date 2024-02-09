@@ -184,6 +184,8 @@ class DistillationIQASolver(object):
 
             if test_TID_srcc + test_TID_plcc + test_TID_krcc > best_srcc_TID + best_plcc_TID + best_krcc_TID:
                 best_srcc_TID, best_plcc_TID, best_krcc_TID = test_TID_srcc, test_TID_plcc, test_TID_krcc
+                torch.save(self.studentNet.state_dict(), os.path.join(self.config.model_checkpoint_dir, 'BEST_Distillation_inner_{}_saved_model.pth'.format(t)))
+
 
             print('%d:tid\t%4.3f\t\t%4.4f\t\t%4.4f\t\t%4.4f\t\t%4.4f \n' %
             (t, sum(epoch_loss) / len(epoch_loss), train_srcc, test_TID_srcc, test_TID_plcc, test_TID_krcc))
