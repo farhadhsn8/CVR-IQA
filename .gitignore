@@ -6,8 +6,7 @@
 *.bmp
 *.BMP
 *.zip
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
+
 *.rar
 *.npy
 
@@ -17,10 +16,10 @@
 =======
 *.rar
 cvr-iqa.pdf
->>>>>>> Stashed changes
+
 =======
 *.rar
-
+__pycache__/*
 __pycache__/
 .vscode/
->>>>>>> Stashed changes
+

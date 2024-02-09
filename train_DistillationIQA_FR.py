@@ -1,11 +1,12 @@
 import torch
 import os
 import random
+from tqdm import tqdm
 from dataloaders.dataloader_LQ_HQ import DataLoader
 from option_train_DistillationIQA_FR import set_args, check_args
 from scipy import stats
 import numpy as np
-from tools.nonlinear_convert import convert_obj_score
+from tools import convert_obj_score
 from models.DistillationIQA import DistillationIQANet
 
 img_num = {
@@ -29,6 +30,16 @@ folder_path = {
     }
 
 
+
+def write_to_file(list1 , file_name):
+    with open(file_name, 'w') as filehandle:
+        for listitem in list1:
+            filehandle.write(str(listitem))
+            filehandle.write(str(" , "))
+
+
+
+
 class DistillationFRIQASolver(object):
     def __init__(self, config):
         self.config = config
@@ -38,7 +49,7 @@ class DistillationFRIQASolver(object):
             f.close()
         
         #model
-        self.teacherNet = DistillationIQANet(self_patch_num=config.self_patch_num, distillation_layer=config.distillation_layer)
+        self.teacherNet = DistillationIQANet(self_patch_num=config.self_patch_num, distillation_layer=config.distillation_layer, stacking_mode=config.feature_stacking)
         if config.teacherNet_model_path:
             self.teacherNet._load_state_dict(torch.load(config.teacherNet_pretrained_path))
         self.teacherNet = self.teacherNet.to(self.device)
@@ -61,13 +72,13 @@ class DistillationFRIQASolver(object):
         config.train_index = img_num[config.train_dataset]
         random.shuffle(config.train_index)
         train_loader = DataLoader(config.train_dataset, folder_path[config.train_dataset], config.train_index, config.patch_size, config.train_patch_num, batch_size=config.batch_size, istrain=True, self_patch_num=config.self_patch_num)
-        test_loader_LIVE = DataLoader('live', folder_path['live'], img_num['live'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
-        test_loader_CSIQ = DataLoader('csiq', folder_path['csiq'], img_num['csiq'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
+        # test_loader_LIVE = DataLoader('live', folder_path['live'], img_num['live'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
+        # test_loader_CSIQ = DataLoader('csiq', folder_path['csiq'], img_num['csiq'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
         test_loader_TID = DataLoader('tid2013', folder_path['tid2013'], img_num['tid2013'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
         
         self.train_data = train_loader.get_dataloader()
-        self.test_data_LIVE = test_loader_LIVE.get_dataloader()
-        self.test_data_CSIQ = test_loader_CSIQ.get_dataloader()
+        # self.test_data_LIVE = test_loader_LIVE.get_dataloader()
+        # self.test_data_CSIQ = test_loader_CSIQ.get_dataloader()
         self.test_data_TID = test_loader_TID.get_dataloader()
 
     def train(self):
@@ -75,16 +86,29 @@ class DistillationFRIQASolver(object):
         best_plcc_LIVE, best_plcc_CSIQ, best_plcc_TID = 0.0, 0.0, 0.0
         best_krcc_LIVE, best_krcc_CSIQ, best_krcc_TID = 0.0, 0.0, 0.0
         
+        
+        total_params = sum(p.numel() for p in self.teacherNet.parameters())
+        print(f"\n\nNumber of total parameters in teacher net: {total_params}")
+
+        # Count trainable parameters
+        trainable_params = sum(p.numel() for p in self.teacherNet.parameters() if p.requires_grad)
+        print(f"Number of trainable parameters in teacher net: {trainable_params}\n\n")
+
         print('Epoch\tTrain_Loss\tTrain_SRCC\tTest_SRCC\tTest_PLCC\tTest_KRCC')
+        
+        
+        
         # NEW
         scaler = torch.cuda.amp.GradScaler()
-
+        test_TID_srcc, test_TID_plcc, test_TID_krcc = 0 , 0, 0
+        train_acc = []
+        test_acc = []
         for t in range(self.epochs):
             epoch_loss = []
             pred_scores = []
             gt_scores = []
 
-            for LQ_patches, refHQ_patches, label in self.train_data:
+            for LQ_patches, refHQ_patches, label in tqdm(self.train_data):
                 LQ_patches, refHQ_patches, label = LQ_patches.to(self.device), refHQ_patches.to(self.device), label.to(self.device)
                 self.optimizer.zero_grad()
 
@@ -101,27 +125,38 @@ class DistillationFRIQASolver(object):
                 scaler.update()
             
             train_srcc, _ = stats.spearmanr(pred_scores, gt_scores)
+            train_acc.append(train_srcc)
             try:
-                test_TID_srcc, test_TID_plcc, test_TID_krcc = self.test(self.test_data_TID)
-                test_LIVE_srcc, test_LIVE_plcc, test_LIVE_krcc = self.test(self.test_data_LIVE)
-                test_CSIQ_srcc, test_CSIQ_plcc, test_CSIQ_krcc = self.test(self.test_data_CSIQ)
+                if t % 5 ==0:
+                    test_TID_srcc, test_TID_plcc, test_TID_krcc = self.test(self.test_data_TID)
+                test_acc.append(test_TID_srcc)
+                # test_LIVE_srcc, test_LIVE_plcc, test_LIVE_krcc = self.test(self.test_data_LIVE)
+                # test_CSIQ_srcc, test_CSIQ_plcc, test_CSIQ_krcc = self.test(self.test_data_CSIQ)
             except:
                 pass
 
-            if test_LIVE_srcc + test_LIVE_plcc + test_LIVE_krcc > best_srcc_LIVE + best_plcc_LIVE + best_krcc_LIVE:
-                best_srcc_LIVE, best_srcc_CSIQ, best_srcc_TID = test_LIVE_srcc, test_CSIQ_srcc, test_TID_srcc
-                print('%d:live\t%4.3f\t\t%4.4f\t\t%4.4f\t\t%4.4f\t\t%4.4f \n' %
-                (t, sum(epoch_loss) / len(epoch_loss), train_srcc, test_LIVE_srcc, test_LIVE_plcc, test_LIVE_krcc))
+            # if test_LIVE_srcc + test_LIVE_plcc + test_LIVE_krcc > best_srcc_LIVE + best_plcc_LIVE + best_krcc_LIVE:
+            #     best_srcc_LIVE, best_srcc_CSIQ, best_srcc_TID = test_LIVE_srcc, test_CSIQ_srcc, test_TID_srcc
+            #     print('%d:live\t%4.3f\t\t%4.4f\t\t%4.4f\t\t%4.4f\t\t%4.4f \n' %
+            #     (t, sum(epoch_loss) / len(epoch_loss), train_srcc, test_LIVE_srcc, test_LIVE_plcc, test_LIVE_krcc))
             
-            if test_CSIQ_srcc + test_CSIQ_plcc + test_CSIQ_krcc > best_srcc_CSIQ + best_plcc_CSIQ + best_krcc_CSIQ:
-                best_plcc_LIVE, best_plcc_CSIQ, best_plcc_TID = test_LIVE_plcc, test_CSIQ_plcc, test_TID_plcc
-                print('%d:csiq\t%4.3f\t\t%4.4f\t\t%4.4f\t\t%4.4f\t\t%4.4f \n' %
-                (t, sum(epoch_loss) / len(epoch_loss), train_srcc, test_CSIQ_srcc, test_CSIQ_plcc, test_CSIQ_krcc))
-            
+            # if test_CSIQ_srcc + test_CSIQ_plcc + test_CSIQ_krcc > best_srcc_CSIQ + best_plcc_CSIQ + best_krcc_CSIQ:
+            #     best_plcc_LIVE, best_plcc_CSIQ, best_plcc_TID = test_LIVE_plcc, test_CSIQ_plcc, test_TID_plcc
+            #     print('%d:csiq\t%4.3f\t\t%4.4f\t\t%4.4f\t\t%4.4f\t\t%4.4f \n' %
+            #     (t, sum(epoch_loss) / len(epoch_loss), train_srcc, test_CSIQ_srcc, test_CSIQ_plcc, test_CSIQ_krcc))
+           
+
             if test_TID_srcc + test_TID_plcc + test_TID_krcc > best_srcc_TID + best_plcc_TID + best_krcc_TID:
-                best_krcc_LIVE, best_krcc_CSIQ, best_krcc_TID = test_LIVE_krcc, test_CSIQ_krcc, test_TID_krcc
-                print('%d:tid\t%4.3f\t\t%4.4f\t\t%4.4f\t\t%4.4f\t\t%4.4f \n' %
-                (t, sum(epoch_loss) / len(epoch_loss), train_srcc, test_TID_srcc, test_TID_plcc, test_TID_krcc))
+                best_srcc_TID, best_plcc_TID, best_krcc_TID = test_TID_srcc, test_TID_plcc, test_TID_krcc
+                torch.save(self.teacherNet.state_dict(), os.path.join(self.config.model_checkpoint_dir, 'BEST_FRIQA_{}_saved_model.pth'.format(t)))
+            
+            
+            print('%d:tid\t%4.3f\t\t%4.4f\t\t%4.4f\t\t%4.4f\t\t%4.4f \n' %
+            (t, sum(epoch_loss) / len(epoch_loss), train_srcc, test_TID_srcc, test_TID_plcc, test_TID_krcc))
+
+            write_to_file(test_acc , "checkpoint_DistillationIQA/log/test_acc.txt")
+            write_to_file(train_acc , "checkpoint_DistillationIQA/log/train_acc.txt")
+            
             
             torch.save(self.teacherNet.state_dict(), os.path.join(self.config.model_checkpoint_dir, 'FRIQA_{}_saved_model.pth'.format(t)))
             
@@ -135,15 +170,15 @@ class DistillationFRIQASolver(object):
                     ]
             self.optimizer = torch.optim.Adam(paras, weight_decay=self.config.weight_decay)
         
-        print('Best live test SRCC %f, PLCC %f, KRCC %f\n' % (best_srcc_LIVE, best_plcc_LIVE, best_krcc_LIVE))
-        print('Best csiq test SRCC %f, PLCC %f, KRCC %f\n' % (best_srcc_CSIQ, best_plcc_CSIQ, best_krcc_CSIQ))
+        # print('Best live test SRCC %f, PLCC %f, KRCC %f\n' % (best_srcc_LIVE, best_plcc_LIVE, best_krcc_LIVE))
+        # print('Best csiq test SRCC %f, PLCC %f, KRCC %f\n' % (best_srcc_CSIQ, best_plcc_CSIQ, best_krcc_CSIQ))
         print('Best tid2013 test SRCC %f, PLCC %f, KRCC %f\n' % (best_srcc_TID, best_plcc_TID, best_krcc_TID))
 
 
     def test(self, test_data):
         self.teacherNet.train(False)
         test_pred_scores, test_gt_scores = [], []
-        for LQ_patches, refHQ_patches, label in test_data:
+        for LQ_patches, refHQ_patches, label in tqdm(test_data):
             LQ_patches, refHQ_patches, label = LQ_patches.to(self.device), refHQ_patches.to(self.device), label.to(self.device)
             with torch.no_grad():
                 _, _, pred = self.teacherNet(LQ_patches, refHQ_patches)
