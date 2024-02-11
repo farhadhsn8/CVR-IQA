@@ -51,7 +51,7 @@ class DistillationFRIQASolver(object):
         #model
         self.teacherNet = DistillationIQANet(self_patch_num=config.self_patch_num, distillation_layer=config.distillation_layer, stacking_mode=config.feature_stacking)
         if config.teacherNet_model_path:
-            self.teacherNet._load_state_dict(torch.load(config.teacherNet_pretrained_path))
+            self.teacherNet._load_state_dict(torch.load(config.teacherNet_model_path))
         self.teacherNet = self.teacherNet.to(self.device)
         self.teacherNet.train(True)
         #lr,opt,loss,epoch
@@ -127,7 +127,7 @@ class DistillationFRIQASolver(object):
             train_srcc, _ = stats.spearmanr(pred_scores, gt_scores)
             train_acc.append(train_srcc)
             try:
-                if t % 5 ==0:
+                if t % 3 ==0:
                     test_TID_srcc, test_TID_plcc, test_TID_krcc = self.test(self.test_data_TID)
                 test_acc.append(test_TID_srcc)
                 # test_LIVE_srcc, test_LIVE_plcc, test_LIVE_krcc = self.test(self.test_data_LIVE)

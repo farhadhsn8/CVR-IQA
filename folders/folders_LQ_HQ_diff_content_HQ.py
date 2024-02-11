@@ -188,31 +188,27 @@ class CSIQFolder(data.Dataset):
 
         refpath = os.path.join(root, 'src_imgs')
         refname = getFileName(refpath,'.png')
-        txtpath = os.path.join(root, 'csiq_label.txt')
+        txtpath = os.path.join(root, 'scores.txt')
         fh = open(txtpath, 'r')
         LQ_pathes = []
         target = []
         refpaths_all = []
         for line in fh:
-            line = line.split('\n')
-            words = line[0].split()
-            LQ_pathes.append((words[0]))
-            target.append(words[1])
-            ref_temp = words[0].split(".")
-            refpaths_all.append(ref_temp[0] + '.' + ref_temp[-1])
+            words = line.split(" ")
+            LQ_pathes.append((words[3])[9:])
+            target.append(words[4][:-2])
+            refpaths_all.append(words[2].split("/")[1])
 
         labels = np.array(target).astype(np.float32)
         refpaths_all = np.array(refpaths_all)
-
         sample = []
-
         for i, item in enumerate(index):
             train_sel = (refname[index[i]] == refpaths_all)
             train_sel = np.where(train_sel == True)
             train_sel = train_sel[0].tolist()
             for j, item in enumerate(train_sel):
                 for aug in range(patch_num):
-                    LQ_path = os.path.join(root, 'dst_imgs_all', LQ_pathes[item])
+                    LQ_path = os.path.join(root, 'dst_imgs', LQ_pathes[item])
                     HQ_path = os.path.join(root, 'src_imgs', refpaths_all[item])
                     label = labels[item]
                     sample.append((LQ_path, HQ_path, label))
@@ -225,7 +221,6 @@ class CSIQFolder(data.Dataset):
         self.samples = sample
         self.transform = transform
         self.HQ_diff_content_transform = HQ_diff_content_transform
-
     def __getitem__(self, index):
         """
         Args:
