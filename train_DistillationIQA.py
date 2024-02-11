@@ -49,7 +49,7 @@ class DistillationIQASolver(object):
             f.close()
         
         #model
-        self.teacherNet = DistillationIQANet(self_patch_num=config.self_patch_num, distillation_layer=config.distillation_layer)
+        self.teacherNet = DistillationIQANet(self_patch_num=config.self_patch_num, distillation_layer=config.distillation_layer , stacking_mode=config.feature_stacking)
         if config.teacherNet_model_path:
             self.teacherNet._load_state_dict(torch.load(config.teacherNet_model_path))
         self.teacherNet = self.teacherNet.to(self.device)
