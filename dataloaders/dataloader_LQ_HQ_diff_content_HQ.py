@@ -9,6 +9,10 @@ class DataLoader(object):
 
         self.batch_size = batch_size
         self.istrain = istrain
+        
+        if not self.istrain:
+            batch_size = 1
+            self.batch_size = 1
 
         if (dataset == 'live') | (dataset == 'csiq') | (dataset == 'tid2013') | (dataset == 'livec') | (dataset == 'kadid10k'):
             # Train transforms
