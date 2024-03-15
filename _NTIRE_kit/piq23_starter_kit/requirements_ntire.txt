@@ -1,0 +1,16 @@
+numpy==1.24.2
+opencv-python==4.7.0.72
+Pillow==9.5.0
+pandas==1.5.3
+scikit_learn==1.2.2
+scikit-image==0.20.0
+scipy==1.10.1
+tqdm==4.65.0
+nvidia-ml-py==11.525.84 # used for getting information from the gpu
+--find-links=https://download.pytorch.org/whl/cu118/torch
+torch==2.0.0+cu118
+--find-links=https://download.pytorch.org/whl/cu118/torchvision
+torchvision==0.15.1+cu118
+pytorch-lightning==2.0.1.post0
+loralib==0.1.2
+peft==0.7.1

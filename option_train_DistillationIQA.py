@@ -31,7 +31,7 @@ def set_args():
     parser.add_argument('--feature_stacking', type=str2bool, default=False)
     parser.add_argument('--gpu_ids', type=str, default='0')
     parser.add_argument('--test_dataset', type=str, default='live', help='Support datasets: pipal|livec|koniq-10k|bid|live|csiq|tid2013|kadid10k')
-    parser.add_argument('--train_dataset', type=str, default='kadid10k', help='Support datasets: pipal|livec|koniq-10k|bid|live|csiq|tid2013|kadid10k')
+    parser.add_argument('--train_dataset', type=str, default='kadid10k', help='Support datasets: pipal|livec|koniq-10k|bid|live|csiq|tid2013|kadid10k|piq23')
     parser.add_argument('--train_patch_num', type=int, default=1, help='Number of sample patches from training image')
     parser.add_argument('--test_patch_num', type=int, default=1, help='Number of sample patches from testing image')
     parser.add_argument('--lr', dest='lr', type=float, default=2e-5, help='Learning rate')

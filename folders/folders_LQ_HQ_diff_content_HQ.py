@@ -9,8 +9,20 @@ import numpy as np
 import csv
 import random
 from openpyxl import load_workbook
+import pandas as pd
 import cv2
 from torchvision import transforms
+
+
+
+
+def read_csv_column_to_list(file_path, column_name):
+    df = pd.read_csv(file_path)
+    column_data = df[column_name].tolist()
+    return column_data
+
+
+
 
 class Kadid10kFolder(data.Dataset):
     def __init__(self, root, HQ_diff_content_root, index, transform, HQ_diff_content_transform, patch_num, patch_size=224, self_patch_num=10):
@@ -188,31 +200,27 @@ class CSIQFolder(data.Dataset):
 
         refpath = os.path.join(root, 'src_imgs')
         refname = getFileName(refpath,'.png')
-        txtpath = os.path.join(root, 'csiq_label.txt')
+        txtpath = os.path.join(root, 'scores.txt')
         fh = open(txtpath, 'r')
         LQ_pathes = []
         target = []
         refpaths_all = []
         for line in fh:
-            line = line.split('\n')
-            words = line[0].split()
-            LQ_pathes.append((words[0]))
-            target.append(words[1])
-            ref_temp = words[0].split(".")
-            refpaths_all.append(ref_temp[0] + '.' + ref_temp[-1])
+            words = line.split(" ")
+            LQ_pathes.append((words[3])[9:])
+            target.append(words[4][:-2])
+            refpaths_all.append(words[2].split("/")[1])
 
         labels = np.array(target).astype(np.float32)
         refpaths_all = np.array(refpaths_all)
-
         sample = []
-
         for i, item in enumerate(index):
             train_sel = (refname[index[i]] == refpaths_all)
             train_sel = np.where(train_sel == True)
             train_sel = train_sel[0].tolist()
             for j, item in enumerate(train_sel):
                 for aug in range(patch_num):
-                    LQ_path = os.path.join(root, 'dst_imgs_all', LQ_pathes[item])
+                    LQ_path = os.path.join(root, 'dst_imgs', LQ_pathes[item])
                     HQ_path = os.path.join(root, 'src_imgs', refpaths_all[item])
                     label = labels[item]
                     sample.append((LQ_path, HQ_path, label))
@@ -225,7 +233,6 @@ class CSIQFolder(data.Dataset):
         self.samples = sample
         self.transform = transform
         self.HQ_diff_content_transform = HQ_diff_content_transform
-
     def __getitem__(self, index):
         """
         Args:
@@ -259,6 +266,71 @@ class CSIQFolder(data.Dataset):
     def __len__(self):
         length = len(self.samples)
         return length
+
+class PIQ23Folder(data.Dataset): # mode: all, train80, test20
+
+    def __init__(self, root, HQ_diff_content_root, index, transform, HQ_diff_content_transform, patch_num, patch_size =224, self_patch_num=10 , mode = "all" , type="Overall"):
+        self.patch_size =patch_size
+        self.self_patch_num = self_patch_num
+        if mode == "all":
+            txtpath = os.path.join(root, 'Scores_'+type+'.csv')
+        if mode =="test20":
+            txtpath = os.path.join(root, 'ntire24_overall_scene_test.csv')
+        if mode =="train80":    
+            txtpath = os.path.join(root, 'ntire24_overall_scene_train.csv')
+
+        print("PIQ23  |  type" , type)
+        print("mode" , mode)
+        print("csv file address" , txtpath)
+
+        LQ_pathes = read_csv_column_to_list(column_name="IMAGE PATH" , file_path=txtpath)
+        target = read_csv_column_to_list(column_name="JOD" , file_path=txtpath)
+ 
+
+        labels = np.array(target).astype(np.float32)
+        sample = []
+        for _, item in enumerate(index):
+            for _ in range(patch_num):
+                LQ_path = os.path.join(root, LQ_pathes[item])
+                label = labels[item]
+                sample.append((LQ_path, label))
+        
+        self.HQ_diff_content = []
+        for HQ_diff_content_img_name in os.listdir(HQ_diff_content_root):
+            if HQ_diff_content_img_name[-3:] == 'png' or HQ_diff_content_img_name[-3:] == 'jpg' or HQ_diff_content_img_name[-3:] == 'bmp':
+                self.HQ_diff_content.append(os.path.join(HQ_diff_content_root, HQ_diff_content_img_name))
+
+        self.samples = sample
+        self.transform = transform
+        self.HQ_diff_content_transform = HQ_diff_content_transform
+    def __getitem__(self, index):
+        """
+        Args:
+            index (int): Index
+        Returns:
+            tuple: (LQ, HQ, HQ_diff_content, target) where target is IQA values of the target LQ.
+        """
+        LQ_path, target = self.samples[index]
+        HQ_diff_content_path = self.HQ_diff_content[random.randint(0, len(self.HQ_diff_content)-1)]
+        LQ = pil_loader(LQ_path)
+        HQ_diff_content = pil_loader(HQ_diff_content_path)
+        LQ_patches,  HQ_diff_content_patches = [], []
+        for _ in range(self.self_patch_num):
+            LQ_patch = self.HQ_diff_content_transform(LQ)
+            HQ_diff_content_patch = self.HQ_diff_content_transform(HQ_diff_content)
+            
+            LQ_patches.append(LQ_patch.unsqueeze(0))
+            HQ_diff_content_patches.append(HQ_diff_content_patch.unsqueeze(0))
+        #[self_patch_num, 3, patch_size, patch_size]
+        LQ_patches = torch.cat(LQ_patches, 0)
+        HQ_diff_content_patches = torch.cat(HQ_diff_content_patches, 0)
+
+        return LQ_patches, _, HQ_diff_content_patches, target
+
+    def __len__(self):
+        length = len(self.samples)
+        return length
+
 
 class TID2013Folder(data.Dataset):
 
@@ -587,4 +659,3 @@ def pil_loader(path):
     with open(path, 'rb') as f:
         img = Image.open(f)
         return img.convert('RGB')
-

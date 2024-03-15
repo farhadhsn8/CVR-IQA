@@ -7,7 +7,10 @@ from option_train_DistillationIQA import set_args, check_args
 from scipy import stats
 import numpy as np
 from tools import convert_obj_score
-from models.DistillationIQA import DistillationIQANet 
+from models.DistillationIQA import DistillationIQANet ,DistillationIQANet_makeRef
+
+
+os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
 img_num = {
         'kadid10k': list(range(0,10125)),
@@ -17,6 +20,10 @@ img_num = {
         'livec': list(range(0, 1162)),# no-ref image
         'koniq-10k': list(range(0, 10073)),# no-ref image
         'bid': list(range(0, 586)),# no-ref image
+        'piq23': list(range(0, 5116)),# no-ref image  for all mode 
+        'piq23_tr': list(range(0, 3630)),# no-ref image  for all mode 
+        'piq23_ts': list(range(0, 1486)),# no-ref image  for all mode 
+
     }
 folder_path = {
         'pipal':'./dataset/PIPAL',
@@ -26,7 +33,8 @@ folder_path = {
         'livec': './dataset/LIVEC/',
         'koniq-10k': './dataset/koniq-10k/',
         'bid': './dataset/BID/',
-        'kadid10k':'./dataset/kadid10k/'
+        'kadid10k':'./dataset/kadid10k/',
+        'piq23':'./dataset/PIQ23/'
     }
 
 
@@ -49,7 +57,7 @@ class DistillationIQASolver(object):
             f.close()
         
 
-        self.studentNet = DistillationIQANet(self_patch_num=config.self_patch_num, distillation_layer=config.distillation_layer , stacking_mode=config.feature_stacking)
+        self.studentNet = DistillationIQANet_makeRef(self_patch_num=config.self_patch_num, distillation_layer=config.distillation_layer , stacking_mode=config.feature_stacking)
         if config.studentNet_model_path:
             self.studentNet._load_state_dict(torch.load(config.studentNet_model_path))
         self.studentNet = self.studentNet.to(self.device)
@@ -72,16 +80,18 @@ class DistillationIQASolver(object):
         #data
         config.train_index = img_num[config.train_dataset]
         random.shuffle(config.train_index)
-        train_loader = DataLoader(config.train_dataset, folder_path[config.train_dataset], config.ref_train_dataset_path, config.train_index, config.patch_size, config.train_patch_num, batch_size=config.batch_size, istrain=True, self_patch_num=config.self_patch_num)
-        # test_loader_LIVE = DataLoader('live', folder_path['live'], config.ref_test_dataset_path, img_num['live'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
+        train_loader = DataLoader("piq23",  folder_path['piq23'], config.ref_train_dataset_path, img_num['piq23_tr'], config.patch_size, config.train_patch_num, batch_size=config.batch_size, istrain=True, self_patch_num=config.self_patch_num ,  mode = "train80" , type="Overall")
+        test_loader_LIVE = DataLoader('live', folder_path['live'], config.ref_test_dataset_path, img_num['live'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
         # test_loader_CSIQ = DataLoader('csiq', folder_path['csiq'], config.ref_test_dataset_path, img_num['csiq'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
-        test_loader_TID = DataLoader('tid2013', folder_path['tid2013'], config.ref_test_dataset_path, img_num['tid2013'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
+        test_loader_CSIQ = DataLoader('piq23', folder_path['piq23'], config.ref_test_dataset_path, img_num['piq23_ts'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num ,  mode = "test20" , type="Overall")
+        # test_loader_TID = DataLoader('tid2013', folder_path['tid2013'], config.ref_test_dataset_path, img_num['tid2013'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
         # test_loader_Koniq = DataLoader('koniq-10k', folder_path['koniq-10k'], config.ref_test_dataset_path, img_num['koniq-10k'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
         
         self.train_data = train_loader.get_dataloader()
-        # self.test_data_LIVE = test_loader_LIVE.get_dataloader()
+        self.test_data_LIVE = test_loader_LIVE.get_dataloader()
         # self.test_data_CSIQ = test_loader_CSIQ.get_dataloader()
-        self.test_data_TID = test_loader_TID.get_dataloader()
+        self.test_data_PIQ23_ts = test_loader_CSIQ.get_dataloader()
+        # self.test_data_TID = test_loader_TID.get_dataloader()
         # self.test_data_Koniq = test_loader_Koniq.get_dataloader()
 
 
@@ -138,11 +148,12 @@ class DistillationIQASolver(object):
             
             train_srcc, _ = stats.spearmanr(pred_scores, gt_scores)
             train_acc.append(train_srcc)
-            # test_LIVE_srcc, test_LIVE_plcc, test_LIVE_krcc = self.test(self.test_data_LIVE)
-            # test_CSIQ_srcc, test_CSIQ_plcc, test_CSIQ_krcc = self.test(self.test_data_CSIQ)
             if t % 5 ==0:
-                test_TID_srcc, test_TID_plcc, test_TID_krcc = self.test(self.test_data_TID)
-            test_acc.append(test_TID_srcc)
+                test_LIVE_srcc, test_LIVE_plcc, test_LIVE_krcc = self.test(self.test_data_LIVE)
+                # test_CSIQ_srcc, test_CSIQ_plcc, test_CSIQ_krcc = self.test(self.test_data_CSIQ)
+                test_piq_srcc, test_piq_plcc, test_piq_krcc = self.test(self.test_data_PIQ23_ts)
+                # -----------> test piq23 validation <-----------
+            # test_acc.append(test_TID_srcc)
             # test_Koniq_srcc, test_Koniq_plcc, test_Koniq_krcc = solver.test(solver.test_data_Koniq)
 
             # if test_LIVE_srcc + test_LIVE_plcc + test_LIVE_krcc > best_srcc_LIVE + best_plcc_LIVE + best_krcc_LIVE:
@@ -155,11 +166,17 @@ class DistillationIQASolver(object):
             #     print('%d:csiq\t%4.3f\t\t%4.4f\t\t%4.4f\t\t%4.4f\t\t%4.4f \n' %
             #     (t, sum(epoch_loss) / len(epoch_loss), train_srcc, test_CSIQ_srcc, test_CSIQ_plcc, test_CSIQ_krcc))
 
-            if test_TID_srcc + test_TID_plcc + test_TID_krcc > best_srcc_TID + best_plcc_TID + best_krcc_TID:
-                best_srcc_TID, best_plcc_TID, best_krcc_TID = test_TID_srcc, test_TID_plcc, test_TID_krcc
+            # if test_TID_srcc + test_TID_plcc + test_TID_krcc > best_srcc_TID + best_plcc_TID + best_krcc_TID:
+            #     best_srcc_TID, best_plcc_TID, best_krcc_TID = test_TID_srcc, test_TID_plcc, test_TID_krcc
 
-            print('%d:tid\t%4.3f\t\t%4.4f\t\t%4.4f\t\t%4.4f\t\t%4.4f \n' %
-            (t, sum(epoch_loss) / len(epoch_loss), train_srcc, test_TID_srcc, test_TID_plcc, test_TID_krcc))
+            print('%d:live\t%4.3f\t\t%4.4f\t\t%4.4f\t\t%4.4f\t\t%4.4f \n' %
+            (t, sum(epoch_loss) / len(epoch_loss), train_srcc, test_LIVE_srcc, test_LIVE_plcc, test_LIVE_krcc))
+
+            # print('%d:csiq\t%4.3f\t\t%4.4f\t\t%4.4f\t\t%4.4f\t\t%4.4f \n' %
+            # (t, sum(epoch_loss) / len(epoch_loss), train_srcc, test_CSIQ_srcc, test_CSIQ_plcc, test_CSIQ_krcc))
+
+            print('%d:piq\t%4.3f\t\t%4.4f\t\t%4.4f\t\t%4.4f\t\t%4.4f \n' %
+            (t, sum(epoch_loss) / len(epoch_loss), train_srcc, test_piq_srcc, test_piq_plcc, test_piq_krcc))
 
             # if test_Koniq_srcc + test_Koniq_plcc + test_Koniq_krcc > best_srcc_Koniq + best_plcc_Koniq + best_krcc_Koniq:
             #     print('%d:koniq-10k\t%4.3f\t\t%4.4f\t\t%4.4f\t\t%4.4f\t\t%4.4f \n' %
@@ -180,7 +197,7 @@ class DistillationIQASolver(object):
             self.optimizer = torch.optim.Adam(paras, weight_decay=self.config.weight_decay)
         # print('Best live test SRCC %f, PLCC %f, KRCC %f\n' % (best_srcc_LIVE, best_plcc_LIVE, best_krcc_LIVE))
         # print('Best csiq test SRCC %f, PLCC %f, KRCC %f\n' % (best_srcc_CSIQ, best_plcc_CSIQ, best_krcc_CSIQ))
-        print('Best tid2013 test SRCC %f, PLCC %f, KRCC %f\n' % (best_srcc_TID, best_plcc_TID, best_krcc_TID))
+        # print('Best tid2013 test SRCC %f, PLCC %f, KRCC %f\n' % (best_srcc_TID, best_plcc_TID, best_krcc_TID))
         # print('Best koniq-10k test SRCC %f, PLCC %f, KRCC %f\n' % (best_srcc_Koniq, best_plcc_Koniq, best_krcc_Koniq))
 
 
