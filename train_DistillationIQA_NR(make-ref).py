@@ -83,14 +83,14 @@ class DistillationIQASolver(object):
         train_loader = DataLoader("piq23",  folder_path['piq23'], config.ref_train_dataset_path, img_num['piq23_tr'], config.patch_size, config.train_patch_num, batch_size=config.batch_size, istrain=True, self_patch_num=config.self_patch_num ,  mode = "train80" , type="Overall")
         test_loader_LIVE = DataLoader('live', folder_path['live'], config.ref_test_dataset_path, img_num['live'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
         # test_loader_CSIQ = DataLoader('csiq', folder_path['csiq'], config.ref_test_dataset_path, img_num['csiq'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
-        test_loader_CSIQ = DataLoader('piq23', folder_path['piq23'], config.ref_test_dataset_path, img_num['piq23_ts'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num ,  mode = "test20" , type="Overall")
+        test_loader_PIQ23_ts = DataLoader('piq23', folder_path['piq23'], config.ref_test_dataset_path, img_num['piq23_ts'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num ,  mode = "test20" , type="Overall")
         # test_loader_TID = DataLoader('tid2013', folder_path['tid2013'], config.ref_test_dataset_path, img_num['tid2013'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
         # test_loader_Koniq = DataLoader('koniq-10k', folder_path['koniq-10k'], config.ref_test_dataset_path, img_num['koniq-10k'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
         
         self.train_data = train_loader.get_dataloader()
         self.test_data_LIVE = test_loader_LIVE.get_dataloader()
         # self.test_data_CSIQ = test_loader_CSIQ.get_dataloader()
-        self.test_data_PIQ23_ts = test_loader_CSIQ.get_dataloader()
+        self.test_data_PIQ23_ts = test_loader_PIQ23_ts.get_dataloader()
         # self.test_data_TID = test_loader_TID.get_dataloader()
         # self.test_data_Koniq = test_loader_Koniq.get_dataloader()
 

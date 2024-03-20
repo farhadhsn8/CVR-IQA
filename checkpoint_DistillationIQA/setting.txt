@@ -1,5 +1,5 @@
 ------------ Options -------------
-feature_stacking: False
+feature_stacking: True
 gpu_ids: 0
 test_dataset: live
 train_dataset: kadid10k
