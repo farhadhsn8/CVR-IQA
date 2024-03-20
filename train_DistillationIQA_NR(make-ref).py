@@ -1,4 +1,5 @@
 import torch
+from torch import nn
 import os
 from tqdm import tqdm
 import random
@@ -57,7 +58,7 @@ class DistillationIQASolver(object):
             f.close()
         
 
-        self.studentNet = DistillationIQANet_makeRef(self_patch_num=config.self_patch_num, distillation_layer=config.distillation_layer , stacking_mode=config.feature_stacking)
+        self.studentNet = DistillationIQANet(self_patch_num=config.self_patch_num, distillation_layer=config.distillation_layer , stacking_mode=config.feature_stacking)
         if config.studentNet_model_path:
             self.studentNet._load_state_dict(torch.load(config.studentNet_model_path))
         self.studentNet = self.studentNet.to(self.device)
@@ -80,15 +81,13 @@ class DistillationIQASolver(object):
         #data
         config.train_index = img_num[config.train_dataset]
         random.shuffle(config.train_index)
-        train_loader = DataLoader("piq23",  folder_path['piq23'], config.ref_train_dataset_path, img_num['piq23_tr'], config.patch_size, config.train_patch_num, batch_size=config.batch_size, istrain=True, self_patch_num=config.self_patch_num ,  mode = "train80" , type="Overall")
-        test_loader_LIVE = DataLoader('live', folder_path['live'], config.ref_test_dataset_path, img_num['live'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
+        train_loader = DataLoader("piq23",  folder_path['piq23'], config.ref_train_dataset_path, img_num['piq23'], config.patch_size, config.train_patch_num, batch_size=config.batch_size, istrain=True, self_patch_num=config.self_patch_num ,  mode = "all" , type="Overall")
         # test_loader_CSIQ = DataLoader('csiq', folder_path['csiq'], config.ref_test_dataset_path, img_num['csiq'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
         test_loader_PIQ23_ts = DataLoader('piq23', folder_path['piq23'], config.ref_test_dataset_path, img_num['piq23_ts'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num ,  mode = "test20" , type="Overall")
         # test_loader_TID = DataLoader('tid2013', folder_path['tid2013'], config.ref_test_dataset_path, img_num['tid2013'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
         # test_loader_Koniq = DataLoader('koniq-10k', folder_path['koniq-10k'], config.ref_test_dataset_path, img_num['koniq-10k'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
         
         self.train_data = train_loader.get_dataloader()
-        self.test_data_LIVE = test_loader_LIVE.get_dataloader()
         # self.test_data_CSIQ = test_loader_CSIQ.get_dataloader()
         self.test_data_PIQ23_ts = test_loader_PIQ23_ts.get_dataloader()
         # self.test_data_TID = test_loader_TID.get_dataloader()
@@ -109,6 +108,7 @@ class DistillationIQASolver(object):
         trainable_params = sum(p.numel() for p in self.studentNet.parameters() if p.requires_grad)
         print(f"Number of trainable parameters in student net: {trainable_params}\n\n")
 
+        print(f"***** it has rankLoss ******")
 
         print('Epoch\tTrain_Loss\tTrain_SRCC\tTest_SRCC\tTest_PLCC\tTest_KRCC')
 
@@ -120,6 +120,7 @@ class DistillationIQASolver(object):
         sumLosses = []
         train_acc = []
         test_acc = []
+
         for t in range(self.epochs):
             epoch_loss = []
             pred_scores = []
@@ -134,8 +135,23 @@ class DistillationIQASolver(object):
                 
                     pred_scores = pred_scores + pred.cpu().tolist()
                     gt_scores = gt_scores + label.cpu().tolist()
-                    loss = self.l1_loss(pred.squeeze(), label.float().detach())
 
+                    #---------rank loss-----------------
+
+                    indexlabel = torch.argsort(label) # small--> large
+                    anchor1 = torch.unsqueeze(pred[indexlabel[0],...].contiguous(),dim=0) # d_min
+                    positive1 = torch.unsqueeze(pred[indexlabel[1],...].contiguous(),dim=0) # d'_min+
+                    negative1_1 = torch.unsqueeze(pred[indexlabel[-1],...].contiguous(),dim=0) # d_max+
+
+                    anchor2 = torch.unsqueeze(pred[indexlabel[-1],...].contiguous(),dim=0)# d_max
+                    positive2 = torch.unsqueeze(pred[indexlabel[-2],...].contiguous(),dim=0)# d'_max+
+                    negative2_1 = torch.unsqueeze(pred[indexlabel[0],...].contiguous(),dim=0)# d_min+
+
+                    triplet_loss1 = nn.TripletMarginLoss(margin=(label[indexlabel[-1]]-label[indexlabel[1]]), p=1) # d_min,d'_min,d_max
+                    triplet_loss2 = nn.TripletMarginLoss(margin=(label[indexlabel[-2]]-label[indexlabel[0]]), p=1)
+                    tripletlosses = triplet_loss1(anchor1, positive1, negative1_1) + triplet_loss2(anchor2, positive2, negative2_1)
+                    loss = self.l1_loss(pred.squeeze(), label.float().detach()) + 0.5* tripletlosses
+                    
                   
 
                     predLosses.append(loss)
@@ -148,8 +164,7 @@ class DistillationIQASolver(object):
             
             train_srcc, _ = stats.spearmanr(pred_scores, gt_scores)
             train_acc.append(train_srcc)
-            if t % 5 ==0:
-                test_LIVE_srcc, test_LIVE_plcc, test_LIVE_krcc = self.test(self.test_data_LIVE)
+            if t % 3 ==0:
                 # test_CSIQ_srcc, test_CSIQ_plcc, test_CSIQ_krcc = self.test(self.test_data_CSIQ)
                 test_piq_srcc, test_piq_plcc, test_piq_krcc = self.test(self.test_data_PIQ23_ts)
                 # -----------> test piq23 validation <-----------
@@ -169,8 +184,8 @@ class DistillationIQASolver(object):
             # if test_TID_srcc + test_TID_plcc + test_TID_krcc > best_srcc_TID + best_plcc_TID + best_krcc_TID:
             #     best_srcc_TID, best_plcc_TID, best_krcc_TID = test_TID_srcc, test_TID_plcc, test_TID_krcc
 
-            print('%d:live\t%4.3f\t\t%4.4f\t\t%4.4f\t\t%4.4f\t\t%4.4f \n' %
-            (t, sum(epoch_loss) / len(epoch_loss), train_srcc, test_LIVE_srcc, test_LIVE_plcc, test_LIVE_krcc))
+            # print('%d:live\t%4.3f\t\t%4.4f\t\t%4.4f\t\t%4.4f\t\t%4.4f \n' %
+            # (t, sum(epoch_loss) / len(epoch_loss), train_srcc, test_LIVE_srcc, test_LIVE_plcc, test_LIVE_krcc))
 
             # print('%d:csiq\t%4.3f\t\t%4.4f\t\t%4.4f\t\t%4.4f\t\t%4.4f \n' %
             # (t, sum(epoch_loss) / len(epoch_loss), train_srcc, test_CSIQ_srcc, test_CSIQ_plcc, test_CSIQ_krcc))
