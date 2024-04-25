@@ -490,9 +490,10 @@ class DistillationIQANet(nn.Module):
             self.lda4_process = nn.Sequential(nn.Conv2d(2048, self.lda_channel, kernel_size=1, stride=1, padding=0), nn.AdaptiveAvgPool2d((7, 7)))
         
         if self.stacking_mode == True:
-            print("stacking mode(combined)...")
-            self.lda1_process = nn.Sequential(nn.Conv2d(2560, 2 * self.lda_channel, kernel_size=1, stride=1, padding=0),
-                                              nn.Conv2d(2 * self.lda_channel, 10 * self.lda_channel, kernel_size=1, stride=1, padding=0), nn.AdaptiveAvgPool2d((7, 7)))
+            print("stacking modeV2(combined)...")
+            # self.lda1_process = nn.Sequential(nn.Conv2d(2560, 2 * self.lda_channel, kernel_size=1, stride=1, padding=0),
+            #                                   nn.Conv2d(2 * self.lda_channel, 10 * self.lda_channel, kernel_size=1, stride=1, padding=0), nn.AdaptiveAvgPool2d((7, 7)))
+            self.lda1_process = nn.Sequential(nn.Conv2d(256, self.lda_channel, kernel_size=1, stride=1, padding=0), nn.AdaptiveAvgPool2d((7, 7)))
             self.lda2_process = nn.Sequential(nn.Conv2d(5120, 2 * self.lda_channel, kernel_size=1, stride=1, padding=0),
                                               nn.Conv2d(2 * self.lda_channel, 10 * self.lda_channel, kernel_size=1, stride=1, padding=0), nn.AdaptiveAvgPool2d((7, 7)))
             self.lda3_process = nn.Sequential(nn.Conv2d(10240, 2 *  self.lda_channel, kernel_size=1, stride=1, padding=0),
@@ -561,7 +562,7 @@ class DistillationIQANet(nn.Module):
         multi_scale_diff_feature, multi_scale_lq_feature, feature = [], [], []
         for lq_lda_feature, refHQ_lda_feature, lda_process in zip(lq_lda_features, refHQ_lda_features, self.lda_process):
             # [b*p, 256, 56, 56] --> [b, 2560, 56, 56]
-            if self.stacking_mode:
+            if self.stacking_mode and c != 0:
                 lq_lda_feature = lq_lda_feature.view(b, -1, w_h_features[c], w_h_features[c])  
                 refHQ_lda_feature = refHQ_lda_feature.view(b, -1, w_h_features[c], w_h_features[c])  
 
