@@ -10,8 +10,6 @@ import csv
 import random
 from openpyxl import load_workbook
 import pandas as pd
-import cv2
-from torchvision import transforms
 
 
 
@@ -292,6 +290,7 @@ class PIQ23Folder(data.Dataset): # mode: all, train80, test20
         for _, item in enumerate(index):
             for _ in range(patch_num):
                 LQ_path = os.path.join(root, LQ_pathes[item])
+                LQ_path = LQ_path.replace("\\", "/")
                 label = labels[item]
                 sample.append((LQ_path, label))
         

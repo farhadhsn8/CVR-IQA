@@ -35,7 +35,7 @@ folder_path = {
         'koniq-10k': './dataset/koniq-10k/',
         'bid': './dataset/BID/',
         'kadid10k':'./dataset/kadid10k/',
-        'piq23':'./dataset/PIQ23/'
+        'piq23':'/storage/MIVP/PIQ2023-Dataset/'
     }
 
 
@@ -81,7 +81,7 @@ class DistillationIQASolver(object):
         #data
         config.train_index = img_num[config.train_dataset]
         random.shuffle(config.train_index)
-        train_loader = DataLoader("piq23",  folder_path['piq23'], config.ref_train_dataset_path, img_num['piq23'], config.patch_size, config.train_patch_num, batch_size=config.batch_size, istrain=True, self_patch_num=config.self_patch_num ,  mode = "all" , type="Overall")
+        train_loader = DataLoader("piq23",  folder_path['piq23'], config.ref_test_dataset_path, img_num['piq23'], config.patch_size, config.train_patch_num, batch_size=config.batch_size, istrain=True, self_patch_num=config.self_patch_num ,  mode = "all" , type="Overall")
         # test_loader_CSIQ = DataLoader('csiq', folder_path['csiq'], config.ref_test_dataset_path, img_num['csiq'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
         test_loader_PIQ23_ts = DataLoader('piq23', folder_path['piq23'], config.ref_test_dataset_path, img_num['piq23_ts'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num ,  mode = "test20" , type="Overall")
         # test_loader_TID = DataLoader('tid2013', folder_path['tid2013'], config.ref_test_dataset_path, img_num['tid2013'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
@@ -125,8 +125,9 @@ class DistillationIQASolver(object):
             epoch_loss = []
             pred_scores = []
             gt_scores = []
-
+            c=0
             for LQ_patches, _ , ref_patches, label in tqdm(self.train_data):
+                c+=1
                 LQ_patches,  ref_patches, label = LQ_patches.to(self.device),  ref_patches.to(self.device), label.to(self.device)
                 self.optimizer.zero_grad()
 
@@ -150,8 +151,12 @@ class DistillationIQASolver(object):
                     triplet_loss1 = nn.TripletMarginLoss(margin=(label[indexlabel[-1]]-label[indexlabel[1]]), p=1) # d_min,d'_min,d_max
                     triplet_loss2 = nn.TripletMarginLoss(margin=(label[indexlabel[-2]]-label[indexlabel[0]]), p=1)
                     tripletlosses = triplet_loss1(anchor1, positive1, negative1_1) + triplet_loss2(anchor2, positive2, negative2_1)
-                    loss = self.l1_loss(pred.squeeze(), label.float().detach()) + 0.5* tripletlosses
-                    
+                    regLoss = self.l1_loss(pred.squeeze(), label.float().detach())
+                    loss = regLoss + 0.15* tripletlosses
+                    if c % 300 == 1:
+                        print("\n tr loss",0.15*tripletlosses)
+                        print("l1 loss",self.l1_loss(pred.squeeze(), label.float().detach()))
+                        print("LL ", loss)
                   
 
                     predLosses.append(loss)

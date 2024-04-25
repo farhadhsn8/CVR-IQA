@@ -28,7 +28,7 @@ def str2bool(v):
 
 def set_args():
     parser = argparse.ArgumentParser()  
-    parser.add_argument('--feature_stacking', type=str2bool, default=False)
+    parser.add_argument('--feature_stacking', type=bool, default=False)
     parser.add_argument('--gpu_ids', type=str, default='0')
     parser.add_argument('--test_dataset', type=str, default='live', help='Support datasets: pipal|livec|koniq-10k|bid|live|csiq|tid2013|kadid10k')
     parser.add_argument('--train_dataset', type=str, default='kadid10k', help='Support datasets: pipal|livec|koniq-10k|bid|live|csiq|tid2013|kadid10k|piq23')

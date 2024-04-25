@@ -43,7 +43,7 @@ class DistillationIQASolver(object):
         self.config = config
         self.device = torch.device('cuda' if config.gpu_ids is not None else 'cpu')
         self.txt_log_path = os.path.join(config.log_checkpoint_dir,'log.txt')
-        self.config.studentNet_model_path = './model_zoo/stacking_ep98_saved_student_model.pth'
+        self.config.studentNet_model_path = './model_zoo/NR(stacking-rankLoss)_89_saved_model.pth'
         with open(self.txt_log_path,"w+") as f:
             f.close()
         
@@ -58,7 +58,7 @@ class DistillationIQASolver(object):
         #data
         test_loader_PIQ23_ts = DataLoader('piq23', folder_path['piq23'], config.ref_test_dataset_path, img_num['piq23_ts'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num ,  mode = "test20" , type="Overall")
         test_loader_LIVE = DataLoader('live', folder_path['live'], config.ref_test_dataset_path, img_num['live'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
-        test_loader_PIQ23 = DataLoader('piq23', folder_path['piq23'], config.ref_test_dataset_path, img_num['piq23'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num , mode = "all" , type="Overall")
+        # test_loader_PIQ23 = DataLoader('piq23', folder_path['piq23'], config.ref_test_dataset_path, img_num['piq23'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num , mode = "all" , type="Overall")
 
         # test_loader_CLIVE = DataLoader('livec', folder_path['livec'], config.ref_test_dataset_path, img_num['livec'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
         # test_loader_CSIQ = DataLoader('csiq', folder_path['csiq'], config.ref_test_dataset_path, img_num['csiq'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
@@ -67,7 +67,7 @@ class DistillationIQASolver(object):
         
         self.test_data_LIVE = test_loader_LIVE.get_dataloader()
         self.test_data_PIQ23_ts = test_loader_PIQ23_ts.get_dataloader()
-        self.test_data_PIQ23 = test_loader_PIQ23.get_dataloader()
+        # self.test_data_PIQ23 = test_loader_PIQ23.get_dataloader()
         # self.test_data_CSIQ = test_loader_CSIQ.get_dataloader()
         # self.test_data_Koniq = test_loader_Koniq.get_dataloader()
 
@@ -151,26 +151,26 @@ if __name__ == "__main__":
         # fold_10_test_Koniq_plcc.append(test_Koniq_plcc)
         # fold_10_test_Koniq_krcc.append(test_Koniq_krcc)
 
-        test_piq23_srcc, test_piq23_plcc, test_piq23_krcc = solver.test(solver.test_data_PIQ23)
-        print('round{} Dataset:piq23 Test_SRCC:{} Test_PLCC:{} TEST_KRCC:{}\n'.format(i, test_piq23_srcc, test_piq23_plcc, test_piq23_krcc))
-        fold_10_test_piq23_srcc.append(test_piq23_srcc)
-        fold_10_test_piq23_plcc.append(test_piq23_plcc)
-        fold_10_test_piq23_krcc.append(test_piq23_krcc)
+        # test_piq23_srcc, test_piq23_plcc, test_piq23_krcc = solver.test(solver.test_data_PIQ23)
+        # print('round{} Dataset:piq23 Test_SRCC:{} Test_PLCC:{} TEST_KRCC:{}\n'.format(i, test_piq23_srcc, test_piq23_plcc, test_piq23_krcc))
+        # fold_10_test_piq23_srcc.append(test_piq23_srcc)
+        # fold_10_test_piq23_plcc.append(test_piq23_plcc)
+        # fold_10_test_piq23_krcc.append(test_piq23_krcc)
 
-        print("final!!")
-        break
+        # print("final!!")
+        # break
 
-        # test_piq23ts_srcc, test_piq23ts_plcc, test_piq23ts_krcc = solver.test(solver.test_data_PIQ23_ts)
-        # print('round{} Dataset:piq23-ts Test_SRCC:{} Test_PLCC:{} TEST_KRCC:{}\n'.format(i, test_piq23ts_srcc, test_piq23ts_plcc, test_piq23ts_krcc))
-        # fold_10_test_piq23ts_srcc.append(test_piq23ts_srcc)
-        # fold_10_test_piq23ts_plcc.append(test_piq23ts_plcc)
-        # fold_10_test_piq23ts_krcc.append(test_piq23ts_krcc)
+        test_piq23ts_srcc, test_piq23ts_plcc, test_piq23ts_krcc = solver.test(solver.test_data_PIQ23_ts)
+        print('round{} Dataset:piq23-ts Test_SRCC:{} Test_PLCC:{} TEST_KRCC:{}\n'.format(i, test_piq23ts_srcc, test_piq23ts_plcc, test_piq23ts_krcc))
+        fold_10_test_piq23ts_srcc.append(test_piq23ts_srcc)
+        fold_10_test_piq23ts_plcc.append(test_piq23ts_plcc)
+        fold_10_test_piq23ts_krcc.append(test_piq23ts_krcc)
 
-        # test_LIVE_srcc, test_LIVE_plcc, test_LIVE_krcc = solver.test(solver.test_data_LIVE)
-        # print('round{} Dataset:LIVE Test_SRCC:{} Test_PLCC:{} TEST_KRCC:{}\n'.format(i, test_LIVE_srcc, test_LIVE_plcc, test_LIVE_krcc))
-        # fold_10_test_LIVE_srcc.append(test_LIVE_srcc)
-        # fold_10_test_LIVE_plcc.append(test_LIVE_plcc)
-        # fold_10_test_LIVE_krcc.append(test_LIVE_krcc)
+        test_LIVE_srcc, test_LIVE_plcc, test_LIVE_krcc = solver.test(solver.test_data_LIVE)
+        print('round{} Dataset:LIVE Test_SRCC:{} Test_PLCC:{} TEST_KRCC:{}\n'.format(i, test_LIVE_srcc, test_LIVE_plcc, test_LIVE_krcc))
+        fold_10_test_LIVE_srcc.append(test_LIVE_srcc)
+        fold_10_test_LIVE_plcc.append(test_LIVE_plcc)
+        fold_10_test_LIVE_krcc.append(test_LIVE_krcc)
 
 
 

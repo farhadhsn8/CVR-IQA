@@ -6,6 +6,7 @@ from models.DistillationIQA import DistillationIQANet
 from PIL import Image
 import torchvision
 
+
 img_num = {
         'kadid10k': list(range(0,10125)),
         'live': list(range(0, 29)),#ref HR image
@@ -34,20 +35,23 @@ class DistillationIQASolver(object):
         self.config.teacherNet_model_path = './model_zoo/FR_teacher_cross_dataset.pth'
         self.config.studentNet_model_path = './model_zoo/NAR_student_cross_dataset.pth'
 
+
+
         self.device = torch.device('cuda' if config.gpu_ids is not None else 'cpu')
         self.txt_log_path = os.path.join(config.log_checkpoint_dir,'log.txt')
         with open(self.txt_log_path,"w+") as f:
             f.close()
         
         #model
-        self.teacherNet = DistillationIQANet(self_patch_num=config.self_patch_num, distillation_layer=config.distillation_layer)
-        if config.teacherNet_model_path:
-            self.teacherNet._load_state_dict(torch.load(config.teacherNet_model_path))
-        self.teacherNet = self.teacherNet.to(self.device)
-        self.teacherNet.train(False)
-        self.studentNet = DistillationIQANet(self_patch_num=config.self_patch_num, distillation_layer=config.distillation_layer)
+        # self.teacherNet = DistillationIQANet(self_patch_num=config.self_patch_num, distillation_layer=config.distillation_layer)
+        # if config.teacherNet_model_path:
+        #     self.teacherNet._load_state_dict(torch.load(config.teacherNet_model_path))
+        # self.teacherNet = self.teacherNet.to(self.device)
+        # self.teacherNet.train(False)
+        self.studentNet = DistillationIQANet(self_patch_num=config.self_patch_num, distillation_layer=config.distillation_layer, stacking_mode=False)
         if config.studentNet_model_path:
             self.studentNet._load_state_dict(torch.load(config.studentNet_model_path))
+            print(">>>>> ",config.studentNet_model_path)
         self.studentNet = self.studentNet.to(self.device)
         self.studentNet.train(True)
 
