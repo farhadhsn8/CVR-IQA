@@ -21,7 +21,7 @@ checkpoint_dir: ./checkpoint_DistillationIQA/
 use_fitting_prcc_srcc: True
 print_netC: False
 teacherNet_model_path: ./model_zoo/FR_teacher_cross_dataset.pth
-studentNet_model_path: None
+studentNet_model_path: ./model_zoo/stackingV2-ep70.pth
 distillation_loss: l1
 ref_train_dataset_path: ./dataset/DIV2K_ref/train_HR/
 ref_test_dataset_path: ./dataset/DIV2K_ref/val_HR/

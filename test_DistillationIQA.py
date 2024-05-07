@@ -43,7 +43,7 @@ class DistillationIQASolver(object):
         self.config = config
         self.device = torch.device('cuda' if config.gpu_ids is not None else 'cpu')
         self.txt_log_path = os.path.join(config.log_checkpoint_dir,'log.txt')
-        self.config.studentNet_model_path = './model_zoo/NR(stacking-rankLoss)_89_saved_model.pth'
+        self.config.studentNet_model_path = './model_zoo/stackingV2-ep70.pth'
         with open(self.txt_log_path,"w+") as f:
             f.close()
         
@@ -56,21 +56,21 @@ class DistillationIQASolver(object):
         self.studentNet.train(True)
     
         #data
-        test_loader_PIQ23_ts = DataLoader('piq23', folder_path['piq23'], config.ref_test_dataset_path, img_num['piq23_ts'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num ,  mode = "test20" , type="Overall")
+        # test_loader_PIQ23_ts = DataLoader('piq23', folder_path['piq23'], config.ref_test_dataset_path, img_num['piq23_ts'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num ,  mode = "test20" , type="Overall")
         test_loader_LIVE = DataLoader('live', folder_path['live'], config.ref_test_dataset_path, img_num['live'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
         # test_loader_PIQ23 = DataLoader('piq23', folder_path['piq23'], config.ref_test_dataset_path, img_num['piq23'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num , mode = "all" , type="Overall")
 
-        # test_loader_CLIVE = DataLoader('livec', folder_path['livec'], config.ref_test_dataset_path, img_num['livec'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
+        test_loader_CLIVE = DataLoader('livec', folder_path['livec'], config.ref_test_dataset_path, img_num['livec'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
         # test_loader_CSIQ = DataLoader('csiq', folder_path['csiq'], config.ref_test_dataset_path, img_num['csiq'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
         # test_loader_TID = DataLoader('tid2013', folder_path['tid2013'], config.ref_test_dataset_path, img_num['tid2013'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
         # test_loader_Koniq = DataLoader('koniq-10k', folder_path['koniq-10k'], config.ref_test_dataset_path, img_num['koniq-10k'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
         
         self.test_data_LIVE = test_loader_LIVE.get_dataloader()
-        self.test_data_PIQ23_ts = test_loader_PIQ23_ts.get_dataloader()
+        # self.test_data_PIQ23_ts = test_loader_PIQ23_ts.get_dataloader()
         # self.test_data_PIQ23 = test_loader_PIQ23.get_dataloader()
         # self.test_data_CSIQ = test_loader_CSIQ.get_dataloader()
         # self.test_data_Koniq = test_loader_Koniq.get_dataloader()
-
+        self.test_data_LIVEC = test_loader_CLIVE.get_dataloader()
     
     def write_list_to_file(self, list_data, file_path):
         with open(file_path, 'w') as filehandle:
@@ -120,16 +120,16 @@ if __name__ == "__main__":
     fold_10_test_piq23ts_srcc, fold_10_test_piq23ts_plcc, fold_10_test_piq23ts_krcc = [], [], []
     fold_10_test_piq23_srcc, fold_10_test_piq23_plcc, fold_10_test_piq23_krcc = [], [], []
 
-    for i in tqdm(range(1)):
+    for i in tqdm(range(3)):
 
 
 
 
-        # test_CLIVE_srcc, test_CLIVE_plcc, test_CLIVE_krcc = solver.test(solver.test_data_CLIVE)
-        # print('round{} Dataset:CLIVE Test_SRCC:{} Test_PLCC:{} TEST_KRCC:{}\n'.format(i, test_CLIVE_srcc, test_CLIVE_plcc, test_CLIVE_krcc))
-        # fold_10_test_CLIVE_srcc.append(test_CLIVE_srcc)
-        # fold_10_test_CLIVE_plcc.append(test_CLIVE_plcc)
-        # fold_10_test_CLIVE_krcc.append(test_CLIVE_krcc)
+        test_CLIVE_srcc, test_CLIVE_plcc, test_CLIVE_krcc = solver.test(solver.test_data_LIVEC)
+        print('round{} Dataset:CLIVE Test_SRCC:{} Test_PLCC:{} TEST_KRCC:{}\n'.format(i, test_CLIVE_srcc, test_CLIVE_plcc, test_CLIVE_krcc))
+        fold_10_test_CLIVE_srcc.append(test_CLIVE_srcc)
+        fold_10_test_CLIVE_plcc.append(test_CLIVE_plcc)
+        fold_10_test_CLIVE_krcc.append(test_CLIVE_krcc)
         
         
         # test_CSIQ_srcc, test_CSIQ_plcc, test_CSIQ_krcc = solver.test(solver.test_data_CSIQ)
@@ -160,11 +160,11 @@ if __name__ == "__main__":
         # print("final!!")
         # break
 
-        test_piq23ts_srcc, test_piq23ts_plcc, test_piq23ts_krcc = solver.test(solver.test_data_PIQ23_ts)
-        print('round{} Dataset:piq23-ts Test_SRCC:{} Test_PLCC:{} TEST_KRCC:{}\n'.format(i, test_piq23ts_srcc, test_piq23ts_plcc, test_piq23ts_krcc))
-        fold_10_test_piq23ts_srcc.append(test_piq23ts_srcc)
-        fold_10_test_piq23ts_plcc.append(test_piq23ts_plcc)
-        fold_10_test_piq23ts_krcc.append(test_piq23ts_krcc)
+        # test_piq23ts_srcc, test_piq23ts_plcc, test_piq23ts_krcc = solver.test(solver.test_data_PIQ23_ts)
+        # print('round{} Dataset:piq23-ts Test_SRCC:{} Test_PLCC:{} TEST_KRCC:{}\n'.format(i, test_piq23ts_srcc, test_piq23ts_plcc, test_piq23ts_krcc))
+        # fold_10_test_piq23ts_srcc.append(test_piq23ts_srcc)
+        # fold_10_test_piq23ts_plcc.append(test_piq23ts_plcc)
+        # fold_10_test_piq23ts_krcc.append(test_piq23ts_krcc)
 
         test_LIVE_srcc, test_LIVE_plcc, test_LIVE_krcc = solver.test(solver.test_data_LIVE)
         print('round{} Dataset:LIVE Test_SRCC:{} Test_PLCC:{} TEST_KRCC:{}\n'.format(i, test_LIVE_srcc, test_LIVE_plcc, test_LIVE_krcc))
@@ -176,11 +176,11 @@ if __name__ == "__main__":
 
 
     
+    print('Dataset:CLIVE Test_SRCC:{} Test_PLCC:{} TEST_KRCC:{}\n'.format(np.mean(fold_10_test_CLIVE_srcc), np.mean(fold_10_test_CLIVE_plcc), np.mean(fold_10_test_CLIVE_krcc)))
     print('Dataset:LIVE Test_SRCC:{} Test_PLCC:{} TEST_KRCC:{}\n'.format(np.mean(fold_10_test_LIVE_srcc), np.mean(fold_10_test_LIVE_plcc), np.mean(fold_10_test_LIVE_krcc)))
-    print('Dataset:PIQ23-ts Test_SRCC:{} Test_PLCC:{} TEST_KRCC:{}\n'.format(np.mean(fold_10_test_piq23ts_srcc), np.mean(fold_10_test_piq23ts_plcc), np.mean(fold_10_test_piq23ts_krcc)))
-    print('Dataset:PIQ23 Test_SRCC:{} Test_PLCC:{} TEST_KRCC:{}\n'.format(np.mean(fold_10_test_piq23_srcc), np.mean(fold_10_test_piq23_plcc), np.mean(fold_10_test_piq23_krcc)))
+    # print('Dataset:PIQ23-ts Test_SRCC:{} Test_PLCC:{} TEST_KRCC:{}\n'.format(np.mean(fold_10_test_piq23ts_srcc), np.mean(fold_10_test_piq23ts_plcc), np.mean(fold_10_test_piq23ts_krcc)))
+    # print('Dataset:PIQ23 Test_SRCC:{} Test_PLCC:{} TEST_KRCC:{}\n'.format(np.mean(fold_10_test_piq23_srcc), np.mean(fold_10_test_piq23_plcc), np.mean(fold_10_test_piq23_krcc)))
 
-    # print('Dataset:CLIVE Test_SRCC:{} Test_PLCC:{} TEST_KRCC:{}\n'.format(np.mean(fold_10_test_CLIVE_srcc), np.mean(fold_10_test_CLIVE_plcc), np.mean(fold_10_test_CLIVE_krcc)))
 
     # print('Dataset:CSIQ Test_SRCC:{} Test_PLCC:{} TEST_KRCC:{}\n'.format(np.mean(fold_10_test_CSIQ_srcc), np.mean(fold_10_test_CSIQ_plcc), np.mean(fold_10_test_CSIQ_krcc)))
     # print('Dataset:TID Test_SRCC:{} Test_PLCC:{} TEST_KRCC:{}\n'.format(np.mean(fold_10_test_TID_srcc), np.mean(fold_10_test_TID_plcc), np.mean(fold_10_test_TID_krcc)))

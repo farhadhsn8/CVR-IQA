@@ -469,9 +469,156 @@ class DistillationIQANet_makeRef(nn.Module):
 
 
 
-class DistillationIQANet(nn.Module):
+
+class DistillationIQANet_org_or_stackingV1(nn.Module):
     def __init__(self, self_patch_num=10, lda_channel=64, encode_decode_channel=64, MLP_depth=9, distillation_layer=9, stacking_mode=False):
-        super(DistillationIQANet, self).__init__()
+        super(DistillationIQANet_org_or_stackingV1, self).__init__()
+        self.self_patch_num = self_patch_num
+        self.lda_channel = lda_channel
+        self.encode_decode_channel = encode_decode_channel
+        self.MLP_depth = MLP_depth
+        self.distillation_layer_num = distillation_layer
+        self.stacking_mode = stacking_mode
+
+        self.feature_extractor = ResNetBackbone()
+        for param in  self.feature_extractor.parameters():
+            param.requires_grad = False
+        if self.stacking_mode == False:
+            print("normal mode...")
+            self.lda1_process = nn.Sequential(nn.Conv2d(256, self.lda_channel, kernel_size=1, stride=1, padding=0), nn.AdaptiveAvgPool2d((7, 7)))
+            self.lda2_process = nn.Sequential(nn.Conv2d(512, self.lda_channel, kernel_size=1, stride=1, padding=0), nn.AdaptiveAvgPool2d((7, 7)))
+            self.lda3_process = nn.Sequential(nn.Conv2d(1024, self.lda_channel, kernel_size=1, stride=1, padding=0), nn.AdaptiveAvgPool2d((7, 7)))
+            self.lda4_process = nn.Sequential(nn.Conv2d(2048, self.lda_channel, kernel_size=1, stride=1, padding=0), nn.AdaptiveAvgPool2d((7, 7)))
+        
+        if self.stacking_mode == True:
+            print("stacking modeV1...")
+            self.lda1_process = nn.Sequential(nn.Conv2d(2560, 2 * self.lda_channel, kernel_size=1, stride=1, padding=0),
+                                              nn.Conv2d(2 * self.lda_channel, 10 * self.lda_channel, kernel_size=1, stride=1, padding=0), nn.AdaptiveAvgPool2d((7, 7)))
+            self.lda2_process = nn.Sequential(nn.Conv2d(5120, 2 * self.lda_channel, kernel_size=1, stride=1, padding=0),
+                                              nn.Conv2d(2 * self.lda_channel, 10 * self.lda_channel, kernel_size=1, stride=1, padding=0), nn.AdaptiveAvgPool2d((7, 7)))
+            self.lda3_process = nn.Sequential(nn.Conv2d(10240, 2 *  self.lda_channel, kernel_size=1, stride=1, padding=0),
+                                              nn.Conv2d(2 * self.lda_channel, 10 * self.lda_channel, kernel_size=1, stride=1, padding=0), nn.AdaptiveAvgPool2d((7, 7)))
+            self.lda4_process = nn.Sequential(nn.Conv2d(20480, 2 *  self.lda_channel, kernel_size=1, stride=1, padding=0),
+                                              nn.Conv2d(2 * self.lda_channel, 10 * self.lda_channel, kernel_size=1, stride=1, padding=0), nn.AdaptiveAvgPool2d((7, 7)))
+
+        self.lda_process = [self.lda1_process, self.lda2_process, self.lda3_process, self.lda4_process]
+
+        self.MLP_encoder_diff = MLPMixer(image_size = 7, channels = self.self_patch_num*self.lda_channel*4, patch_size = 1, dim = self.encode_decode_channel*4, depth = self.MLP_depth*2)
+        self.MLP_encoder_lq = MLPMixer(image_size = 7, channels = self.self_patch_num*self.lda_channel*4, patch_size = 1, dim = self.encode_decode_channel*4, depth = self.MLP_depth)
+        
+        self.regressor = RegressionFCNet()
+
+        initialize_weights(self.MLP_encoder_diff,0.1)
+        initialize_weights(self.MLP_encoder_lq,0.1)
+        initialize_weights(self.regressor,0.1)
+
+        initialize_weights(self.lda1_process,0.1)
+        initialize_weights(self.lda2_process,0.1)
+        initialize_weights(self.lda3_process,0.1)
+        initialize_weights(self.lda4_process,0.1)
+
+
+
+    def ref_features_before_minus(self, LQ_patches, refHQ_patches):
+        device = LQ_patches.device
+        b, p, c, h, w = LQ_patches.shape
+        refHQ_patches_reshape = refHQ_patches.view(b*p, c, h, w)
+
+        # [b*p, 256, 56, 56], [b*p, 512, 28, 28], [b*p, 1024, 14, 14], [b*p, 2048, 7, 7]
+        refHQ_lda_features = self.feature_extractor(refHQ_patches_reshape)[-1]
+
+
+
+        # encode_diff_feature, encode_lq_feature, feature = [], [], []
+        multi_scale_hq_feature = []
+        for  refHQ_lda_feature in  refHQ_lda_features:
+            # [b, p, 64, 7, 7]
+            refHQ_lda_feature = refHQ_lda_feature.view(b, -1)
+            multi_scale_hq_feature.append(refHQ_lda_feature)
+           
+        multi_scale_hq_feature = torch.cat(multi_scale_hq_feature, 1).to(device)
+
+        return multi_scale_hq_feature
+        
+
+      
+    
+
+
+
+    def forward(self, LQ_patches, refHQ_patches):
+        device = LQ_patches.device
+        b, p, c, h, w = LQ_patches.shape
+        LQ_patches_reshape = LQ_patches.view(b*p, c, h, w)
+        refHQ_patches_reshape = refHQ_patches.view(b*p, c, h, w)
+
+        # [b*p, 256, 56, 56], [b*p, 512, 28, 28], [b*p, 1024, 14, 14], [b*p, 2048, 7, 7]
+        lq_lda_features = self.feature_extractor(LQ_patches_reshape)
+        refHQ_lda_features = self.feature_extractor(refHQ_patches_reshape)
+
+        # encode_diff_feature, encode_lq_feature, feature = [], [], []
+        w_h_features = [56,28,14,7]
+        c = 0
+        multi_scale_diff_feature, multi_scale_lq_feature, feature = [], [], []
+        for lq_lda_feature, refHQ_lda_feature, lda_process in zip(lq_lda_features, refHQ_lda_features, self.lda_process):
+            # [b*p, 256, 56, 56] --> [b, 2560, 56, 56]
+            if self.stacking_mode:
+                lq_lda_feature = lq_lda_feature.view(b, -1, w_h_features[c], w_h_features[c])  
+                refHQ_lda_feature = refHQ_lda_feature.view(b, -1, w_h_features[c], w_h_features[c])  
+
+            lq_lda_feature = lda_process(lq_lda_feature).view(b, -1, 7, 7)  
+            refHQ_lda_feature = lda_process(refHQ_lda_feature).view(b, -1, 7, 7)
+         
+            diff_lda_feature = refHQ_lda_feature - lq_lda_feature
+            
+            
+            multi_scale_diff_feature.append(diff_lda_feature)
+            multi_scale_lq_feature.append(lq_lda_feature)
+            c+=1
+
+        multi_scale_lq_feature = torch.cat(multi_scale_lq_feature, 1).to(device)
+        multi_scale_diff_feature = torch.cat(multi_scale_diff_feature, 1).to(device)
+        encode_lq_feature, encode_lq_inner_feature = self.MLP_encoder_lq(multi_scale_lq_feature, self.distillation_layer_num)
+        encode_diff_feature, encode_diff_inner_feature = self.MLP_encoder_diff(multi_scale_diff_feature, self.distillation_layer_num)
+        feature = torch.cat((encode_lq_feature, encode_diff_feature), 1)
+        
+        pred = self.regressor(feature)
+        return encode_diff_inner_feature, encode_lq_inner_feature, pred
+    
+    def _load_state_dict(self, state_dict, strict=True):
+        own_state = self.state_dict()
+        for name, param in state_dict.items():
+            if name in own_state:
+                if isinstance(param, nn.Parameter):
+                    param = param.data
+                try:
+                    own_state[name].copy_(param)
+                except Exception:
+                    if name.find('tail') >= 0:
+                        print('Replace pre-trained upsampler to new one...')
+                    else:
+                        raise RuntimeError('While copying the parameter named {}, '
+                                           'whose dimensions in the model are {} and '
+                                           'whose dimensions in the checkpoint are {}.'
+                                           .format(name, own_state[name].size(), param.size()))
+            elif strict:
+                if name.find('tail') == -1:
+                    raise KeyError('unexpected key "{}" in state_dict'
+                                   .format(name))
+
+        if strict:
+            missing = set(own_state.keys()) - set(state_dict.keys())
+            if len(missing) > 0:
+                raise KeyError('missing keys in state_dict: "{}"'.format(missing))
+
+
+
+
+
+
+class DistillationIQANet_org_or_stackingV2(nn.Module):
+    def __init__(self, self_patch_num=10, lda_channel=64, encode_decode_channel=64, MLP_depth=9, distillation_layer=9, stacking_mode=False):
+        super(DistillationIQANet_org_or_stackingV2, self).__init__()
         self.self_patch_num = self_patch_num
         self.lda_channel = lda_channel
         self.encode_decode_channel = encode_decode_channel
