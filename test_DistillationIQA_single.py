@@ -2,9 +2,10 @@ import torch
 import os
 from option_train_DistillationIQA import set_args, check_args
 import numpy as np
-from models.DistillationIQA import DistillationIQANet 
+from models.DistillationIQA import DistillationIQANet_org_or_stackingV1 , DistillationIQANet_org_or_stackingV2
 from PIL import Image
 import torchvision
+
 
 img_num = {
         'kadid10k': list(range(0,10125)),
@@ -28,11 +29,13 @@ folder_path = {
 
 
 class DistillationIQASolver(object):
-    def __init__(self , interImageFusion = False):
+    def __init__(self, student_address , net_mode):
         config = set_args()
         self.config = config
-        self.config.teacherNet_model_path = './model_zoo/FR_teacher_cross_dataset.pth'
-        self.config.studentNet_model_path = './model_zoo/NAR_student_cross_dataset.pth'
+        # self.config.teacherNet_model_path = './model_zoo/FR_teacher_cross_dataset.pth'
+        self.config.studentNet_model_path = student_address
+
+
 
         self.device = torch.device('cuda' if config.gpu_ids is not None else 'cpu')
         self.txt_log_path = os.path.join(config.log_checkpoint_dir,'log.txt')
@@ -40,14 +43,21 @@ class DistillationIQASolver(object):
             f.close()
         
         #model
-        self.teacherNet = DistillationIQANet(self_patch_num=config.self_patch_num, distillation_layer=config.distillation_layer)
-        if config.teacherNet_model_path:
-            self.teacherNet._load_state_dict(torch.load(config.teacherNet_model_path))
-        self.teacherNet = self.teacherNet.to(self.device)
-        self.teacherNet.train(False)
-        self.studentNet = DistillationIQANet(self_patch_num=config.self_patch_num, distillation_layer=config.distillation_layer)
+        # self.teacherNet = DistillationIQANet(self_patch_num=config.self_patch_num, distillation_layer=config.distillation_layer)
+        # if config.teacherNet_model_path:
+        #     self.teacherNet._load_state_dict(torch.load(config.teacherNet_model_path))
+        # self.teacherNet = self.teacherNet.to(self.device)
+        # self.teacherNet.train(False)
+        if net_mode == "org":
+            self.studentNet = DistillationIQANet_org_or_stackingV1(self_patch_num=config.self_patch_num, distillation_layer=config.distillation_layer, stacking_mode=False)
+        if net_mode == "stackingV1":
+            self.studentNet = DistillationIQANet_org_or_stackingV1(self_patch_num=config.self_patch_num, distillation_layer=config.distillation_layer, stacking_mode=True)
+        if net_mode == "stackingV2":
+            self.studentNet = DistillationIQANet_org_or_stackingV2(self_patch_num=config.self_patch_num, distillation_layer=config.distillation_layer, stacking_mode=True)
+        
         if config.studentNet_model_path:
             self.studentNet._load_state_dict(torch.load(config.studentNet_model_path))
+            print(">>>>> ",config.studentNet_model_path)
         self.studentNet = self.studentNet.to(self.device)
         self.studentNet.train(True)
 
@@ -92,17 +102,16 @@ class DistillationIQASolver(object):
     
 
 
+    def cvr_on_single_image(self , lq_path , ref_path  ):
+        scores = []
+        for _ in range(1):
+            scores.append(self.test(lq_path=lq_path, ref_path=ref_path))
+        return (np.mean(scores))
     
 
 
 
 
-solver = DistillationIQASolver(interImageFusion = True)
-def cvr_on_single_image(lq_path , ref_path , solver = solver ):
-    scores = []
-    for _ in range(1):
-        scores.append(solver.test(lq_path=lq_path, ref_path=ref_path))
-    return (np.mean(scores))
 
 
     
