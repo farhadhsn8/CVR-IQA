@@ -120,7 +120,7 @@ class DistillationIQASolver(object):
 
 
         print('Epoch\tTrain_Loss\tTrain_SRCC\tTest_SRCC\tTest_PLCC\tTest_KRCC')
-
+        test_TID_srcc, test_TID_plcc, test_TID_krcc = self.test(self.test_data_livec)
         # NEW
         scaler = torch.cuda.amp.GradScaler()
         test_TID_srcc, test_TID_plcc, test_TID_krcc = 0 , 0, 0
@@ -247,7 +247,8 @@ class DistillationIQASolver(object):
         for LQ_patches, _, ref_patches, label in tqdm(test_data):
             LQ_patches, ref_patches, label = LQ_patches.to(self.device), ref_patches.to(self.device), label.to(self.device)
             with torch.no_grad():
-                _, _, pred = self.studentNet(LQ_patches, ref_patches)
+            
+                _, _,_,_, pred = self.studentNet(LQ_patches, ref_patches)
                 test_pred_scores.append(float(pred.item()))
                 test_gt_scores = test_gt_scores + label.cpu().tolist()
         if self.config.use_fitting_prcc_srcc:
