@@ -617,7 +617,7 @@ class DistillationIQANet_org_or_stackingV1(nn.Module):
 
 
 class DistillationIQANet_org_or_stackingV2(nn.Module):
-    def __init__(self, self_patch_num=10, lda_channel=64, encode_decode_channel=64, MLP_depth=9, distillation_layer=9, stacking_mode=False):
+    def __init__(self, self_patch_num=10, lda_channel=64, encode_decode_channel=64, MLP_depth=9, distillation_layer=9, stacking_mode=False , repeatable_loss = False):
         super(DistillationIQANet_org_or_stackingV2, self).__init__()
         self.self_patch_num = self_patch_num
         self.lda_channel = lda_channel
@@ -625,6 +625,7 @@ class DistillationIQANet_org_or_stackingV2(nn.Module):
         self.MLP_depth = MLP_depth
         self.distillation_layer_num = distillation_layer
         self.stacking_mode = stacking_mode
+        self.repeatable_loss = repeatable_loss
 
         self.feature_extractor = ResNetBackbone()
         for param in  self.feature_extractor.parameters():
@@ -730,7 +731,10 @@ class DistillationIQANet_org_or_stackingV2(nn.Module):
         feature = torch.cat((encode_lq_feature, encode_diff_feature), 1)
         
         pred = self.regressor(feature)
-        return encode_diff_inner_feature, encode_lq_inner_feature, pred
+        if self.repeatable_loss == False:
+            return encode_diff_inner_feature, encode_lq_inner_feature, pred
+        if self.repeatable_loss == True:
+            return encode_diff_inner_feature, encode_lq_inner_feature, encode_lq_feature, encode_diff_feature, pred
     
     def _load_state_dict(self, state_dict, strict=True):
         own_state = self.state_dict()

@@ -23,7 +23,8 @@ def read_csv_column_to_list(file_path, column_name):
 
 
 class Kadid10kFolder(data.Dataset):
-    def __init__(self, root, HQ_diff_content_root, index, transform, HQ_diff_content_transform, patch_num, patch_size=224, self_patch_num=10):
+    def __init__(self, root, HQ_diff_content_root, index, transform, HQ_diff_content_transform, patch_num, patch_size=224, self_patch_num=10, repeatable_loss = False):
+        self.repeatable_loss = repeatable_loss
         self.patch_size = patch_size
         self.self_patch_num = self_patch_num
         self.HQ_diff_content_root = HQ_diff_content_root
@@ -62,27 +63,37 @@ class Kadid10kFolder(data.Dataset):
             tuple: (LQ, HQ, HQ_diff_content, target) where target is IQA values of the target LQ.
         """
         LQ_path, HQ_path, target = self.samples[index]
-        HQ_diff_content_path = self.HQ_diff_content_paths[random.randint(0, len(self.HQ_diff_content_paths)-1)]
+        HQ_diff_content_path1 = self.HQ_diff_content_paths[random.randint(0, len(self.HQ_diff_content_paths)-1)]
+        HQ_diff_content_path2 = self.HQ_diff_content_paths[random.randint(0, len(self.HQ_diff_content_paths)-1)]
         LQ = pil_loader(LQ_path)
-        HQ_diff_content = pil_loader(HQ_diff_content_path)
+        HQ_diff_content1 = pil_loader(HQ_diff_content_path1)
+        HQ_diff_content2 = pil_loader(HQ_diff_content_path2)
         HQ = pil_loader(HQ_path)
-        LQ_patches, HQ_patches, HQ_diff_content_patches = [], [], []
+        LQ_patches1, HQ_patches, HQ_diff_content_patches1, LQ_patches2, HQ_diff_content_patches2 = [], [], [], [], []
         for _ in range(self.self_patch_num):
-            LQ_patch, HQ_patch = getPairRandomPatch(LQ,HQ, crop_size=self.patch_size)
-            
-            LQ_patch = self.transform(LQ_patch)
+            LQ_patch1, HQ_patch = getPairRandomPatch(LQ,HQ, crop_size=self.patch_size)
+            LQ_patch2, _ = getPairRandomPatch(LQ,HQ, crop_size=self.patch_size)
+            LQ_patch1 = self.transform(LQ_patch1)
+            LQ_patch2 = self.transform(LQ_patch2)
             HQ_patch = self.transform(HQ_patch)
-            HQ_diff_content_patch = self.HQ_diff_content_transform(HQ_diff_content)
-            
-            LQ_patches.append(LQ_patch.unsqueeze(0))
+            HQ_diff_content_patch1 = self.HQ_diff_content_transform(HQ_diff_content1)
+            HQ_diff_content_patch2 = self.HQ_diff_content_transform(HQ_diff_content2)
+            LQ_patches1.append(LQ_patch1.unsqueeze(0))
+            LQ_patches2.append(LQ_patch2.unsqueeze(0))
             HQ_patches.append(HQ_patch.unsqueeze(0))
-            HQ_diff_content_patches.append(HQ_diff_content_patch.unsqueeze(0))
+            HQ_diff_content_patches1.append(HQ_diff_content_patch1.unsqueeze(0))
+            HQ_diff_content_patches2.append(HQ_diff_content_patch2.unsqueeze(0))
         #[self_patch_num, 3, patch_size, patch_size]
-        LQ_patches = torch.cat(LQ_patches, 0)
+        LQ_patches1 = torch.cat(LQ_patches1, 0)
+        LQ_patches2 = torch.cat(LQ_patches2, 0)
         HQ_patches = torch.cat(HQ_patches, 0)
-        HQ_diff_content_patches = torch.cat(HQ_diff_content_patches, 0)
+        HQ_diff_content_patches1 = torch.cat(HQ_diff_content_patches1, 0)
+        HQ_diff_content_patches2 = torch.cat(HQ_diff_content_patches2, 0)
 
-        return LQ_patches, HQ_patches, HQ_diff_content_patches, target
+        if self.repeatable_loss == False:
+            return LQ_patches1, HQ_patches, HQ_diff_content_patches1, target
+        if self.repeatable_loss == True:
+            return LQ_patches1, HQ_patches, LQ_patches2, HQ_diff_content_patches1, HQ_diff_content_patches2, target
 
     def __len__(self):
         length = len(self.samples)
