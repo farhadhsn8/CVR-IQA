@@ -84,8 +84,8 @@ class DistillationIQASolver(object):
         return patches.unsqueeze(0)
 
     def test(self, lq_path, ref_path):
-        self.LQ_patches = self.preprocess(lq_path , resize=True)
-        self.ref_patches = self.preprocess(ref_path , resize=True)
+        self.LQ_patches = self.preprocess(lq_path , resize=False)
+        self.ref_patches = self.preprocess(ref_path , resize=False)
         self.studentNet.train(False)
         LQ_patches, ref_patches = self.LQ_patches.to(self.device), self.ref_patches.to(self.device)
         with torch.no_grad():
