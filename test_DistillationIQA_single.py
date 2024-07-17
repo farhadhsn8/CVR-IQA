@@ -70,9 +70,11 @@ class DistillationIQASolver(object):
         #data
       
     
-    def preprocess(self, path):
+    def preprocess(self, path , resize=False):
         with open(path, 'rb') as f:
             img = Image.open(f)
+            if True == resize:
+                img = img.resize((224, 224))
             img= img.convert('RGB')
         patches = []
         for _ in range(self.config.self_patch_num):
@@ -82,8 +84,8 @@ class DistillationIQASolver(object):
         return patches.unsqueeze(0)
 
     def test(self, lq_path, ref_path):
-        self.LQ_patches = self.preprocess(lq_path)
-        self.ref_patches = self.preprocess(ref_path)
+        self.LQ_patches = self.preprocess(lq_path , resize=False)
+        self.ref_patches = self.preprocess(ref_path , resize=False)
         self.studentNet.train(False)
         LQ_patches, ref_patches = self.LQ_patches.to(self.device), self.ref_patches.to(self.device)
         with torch.no_grad():
