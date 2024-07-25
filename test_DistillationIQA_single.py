@@ -83,14 +83,16 @@ class DistillationIQASolver(object):
         patches = torch.cat(patches, 0)
         return patches.unsqueeze(0)
 
-    def test(self, lq_path, ref_path):
+    def test(self, lq_path, ref_path , feature_extraction = False):
         self.LQ_patches = self.preprocess(lq_path , resize=False)
         self.ref_patches = self.preprocess(ref_path , resize=False)
         self.studentNet.train(False)
         LQ_patches, ref_patches = self.LQ_patches.to(self.device), self.ref_patches.to(self.device)
         with torch.no_grad():
+            if feature_extraction == True:
+                return np.array(self.studentNet(LQ_patches, ref_patches, feature_extraction)[0].cpu())
             _, _, pred = self.studentNet(LQ_patches, ref_patches)
-        return float(pred.item())
+            return float(pred.item())
     
 
     def ref_features_before_minus(self, ref_path):

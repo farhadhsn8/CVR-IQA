@@ -546,7 +546,7 @@ class DistillationIQANet_org_or_stackingV1(nn.Module):
 
 
 
-    def forward(self, LQ_patches, refHQ_patches):
+    def forward(self, LQ_patches, refHQ_patches, feature_extraction=False):
         device = LQ_patches.device
         b, p, c, h, w = LQ_patches.shape
         LQ_patches_reshape = LQ_patches.view(b*p, c, h, w)
@@ -582,6 +582,10 @@ class DistillationIQANet_org_or_stackingV1(nn.Module):
         encode_diff_feature, encode_diff_inner_feature = self.MLP_encoder_diff(multi_scale_diff_feature, self.distillation_layer_num)
         feature = torch.cat((encode_lq_feature, encode_diff_feature), 1)
         
+        if feature_extraction == True:
+            return feature
+        
+
         pred = self.regressor(feature)
         return encode_diff_inner_feature, encode_lq_inner_feature, pred
     
@@ -694,7 +698,7 @@ class DistillationIQANet_org_or_stackingV2(nn.Module):
 
 
 
-    def forward(self, LQ_patches, refHQ_patches):
+    def forward(self, LQ_patches, refHQ_patches , feature_extraction = False):
         device = LQ_patches.device
         b, p, c, h, w = LQ_patches.shape
         LQ_patches_reshape = LQ_patches.view(b*p, c, h, w)
@@ -729,12 +733,17 @@ class DistillationIQANet_org_or_stackingV2(nn.Module):
         encode_lq_feature, encode_lq_inner_feature = self.MLP_encoder_lq(multi_scale_lq_feature, self.distillation_layer_num)
         encode_diff_feature, encode_diff_inner_feature = self.MLP_encoder_diff(multi_scale_diff_feature, self.distillation_layer_num)
         feature = torch.cat((encode_lq_feature, encode_diff_feature), 1)
+
+        if feature_extraction == True:
+            return feature
         
         pred = self.regressor(feature)
+
         if self.repeatable_loss == False:
             return encode_diff_inner_feature, encode_lq_inner_feature, pred
         if self.repeatable_loss == True:
             return encode_diff_inner_feature, encode_lq_inner_feature, encode_lq_feature, encode_diff_feature, pred
+        
     
     def _load_state_dict(self, state_dict, strict=True):
         own_state = self.state_dict()
