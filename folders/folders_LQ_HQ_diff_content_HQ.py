@@ -23,9 +23,10 @@ def read_csv_column_to_list(file_path, column_name):
 
 
 class Kadid10kFolder(data.Dataset):
-    def __init__(self, root, HQ_diff_content_root, index, transform, HQ_diff_content_transform, patch_num, patch_size=224, self_patch_num=10):
+    def __init__(self, root, HQ_diff_content_root, index, transform, HQ_diff_content_transform, patch_num, patch_size=224, self_patch_num=10, patch_num_hq=30):
         self.patch_size = patch_size
         self.self_patch_num = self_patch_num
+        self.patch_num_hq = patch_num_hq
         self.HQ_diff_content_root = HQ_diff_content_root
 
         LQ_paths = []
@@ -62,25 +63,33 @@ class Kadid10kFolder(data.Dataset):
             tuple: (LQ, HQ, HQ_diff_content, target) where target is IQA values of the target LQ.
         """
         LQ_path, HQ_path, target = self.samples[index]
-        HQ_diff_content_path = self.HQ_diff_content_paths[random.randint(0, len(self.HQ_diff_content_paths)-1)]
+        HQ_diff_contents = []
+        for _ in range(self.patch_num_hq):
+            hq_diff_addr = self.HQ_diff_content_paths[random.randint(0, len(self.HQ_diff_content_paths)-1)]
+            HQ_diff_contents.append(pil_loader(hq_diff_addr))
         LQ = pil_loader(LQ_path)
-        HQ_diff_content = pil_loader(HQ_diff_content_path)
         HQ = pil_loader(HQ_path)
         LQ_patches, HQ_patches, HQ_diff_content_patches = [], [], []
+        
+        
+        for i in range(self.patch_num_hq):
+            HQ_diff_content_patch = self.HQ_diff_content_transform(HQ_diff_contents[i])
+            HQ_diff_content_patches.append(HQ_diff_content_patch.unsqueeze(0))
+        
+        
         for _ in range(self.self_patch_num):
             LQ_patch, HQ_patch = getPairRandomPatch(LQ,HQ, crop_size=self.patch_size)
-            
             LQ_patch = self.transform(LQ_patch)
             HQ_patch = self.transform(HQ_patch)
-            HQ_diff_content_patch = self.HQ_diff_content_transform(HQ_diff_content)
+            # print("FFFFF ",LQ_patch.shape , HQ_patch.shape)
             
             LQ_patches.append(LQ_patch.unsqueeze(0))
             HQ_patches.append(HQ_patch.unsqueeze(0))
-            HQ_diff_content_patches.append(HQ_diff_content_patch.unsqueeze(0))
         #[self_patch_num, 3, patch_size, patch_size]
         LQ_patches = torch.cat(LQ_patches, 0)
         HQ_patches = torch.cat(HQ_patches, 0)
         HQ_diff_content_patches = torch.cat(HQ_diff_content_patches, 0)
+        # print("AAAAAA  ", self.patch_size,LQ_patches.shape, HQ_patches.shape, HQ_diff_content_patches.shape, target.shape)
 
         return LQ_patches, HQ_patches, HQ_diff_content_patches, target
 
@@ -90,11 +99,12 @@ class Kadid10kFolder(data.Dataset):
 
 class LIVEFolder(data.Dataset):
 
-    def __init__(self, root, HQ_diff_content_root, index, transform, HQ_diff_content_transform, patch_num, patch_size=224, self_patch_num=10):
+    def __init__(self, root, HQ_diff_content_root, index, transform, HQ_diff_content_transform, patch_num, patch_size=224, self_patch_num=10, patch_num_hq=30):
         self.patch_size =patch_size
         self.self_patch_num = self_patch_num
         self.root = root
         self.HQ_diff_content_root = HQ_diff_content_root
+        self.patch_num_hq = patch_num_hq
 
         refpath = os.path.join(root, 'refimgs')
         refname = getFileName(refpath, '.bmp')
@@ -152,27 +162,35 @@ class LIVEFolder(data.Dataset):
             tuple: (LQ, HQ, HQ_diff_content, target) where target is IQA values of the target LQ.
         """
         LQ_path, HQ_path, target = self.samples[index]
-        HQ_diff_content_path = self.HQ_diff_content_path[random.randint(0, len(self.HQ_diff_content_path)-1)]
+        HQ_diff_contents = []
+        for _ in range(self.patch_num_hq):
+            hq_diff_addr = self.HQ_diff_content_paths[random.randint(0, len(self.HQ_diff_content_paths)-1)]
+            HQ_diff_contents.append(pil_loader(hq_diff_addr))
         LQ = pil_loader(LQ_path)
         HQ = pil_loader(HQ_path)
-        HQ_diff_content = pil_loader(HQ_diff_content_path)
         LQ_patches, HQ_patches, HQ_diff_content_patches = [], [], []
+        
+        
+        for i in range(self.patch_num_hq):
+            HQ_diff_content_patch = self.HQ_diff_content_transform(HQ_diff_contents[i])
+            HQ_diff_content_patches.append(HQ_diff_content_patch.unsqueeze(0))
+        
+        
         for _ in range(self.self_patch_num):
-            LQ_patch, HQ_patch = getPairRandomPatch(LQ, HQ, crop_size=self.patch_size)
+            LQ_patch, HQ_patch = getPairRandomPatch(LQ,HQ, crop_size=self.patch_size)
             
             LQ_patch = self.transform(LQ_patch)
             HQ_patch = self.transform(HQ_patch)
-            HQ_diff_content_patch = self.HQ_diff_content_transform(HQ_diff_content)
             
             LQ_patches.append(LQ_patch.unsqueeze(0))
             HQ_patches.append(HQ_patch.unsqueeze(0))
-            HQ_diff_content_patches.append(HQ_diff_content_patch.unsqueeze(0))
         #[self_patch_num, 3, patch_size, patch_size]
         LQ_patches = torch.cat(LQ_patches, 0)
         HQ_patches = torch.cat(HQ_patches, 0)
         HQ_diff_content_patches = torch.cat(HQ_diff_content_patches, 0)
 
         return LQ_patches, HQ_patches, HQ_diff_content_patches, target
+    
 
     def __len__(self):
         length = len(self.samples)
@@ -192,9 +210,10 @@ class LIVEFolder(data.Dataset):
 
 class CSIQFolder(data.Dataset):
 
-    def __init__(self, root, HQ_diff_content_root, index, transform, HQ_diff_content_transform, patch_num, patch_size =224, self_patch_num=10):
+    def __init__(self, root, HQ_diff_content_root, index, transform, HQ_diff_content_transform, patch_num, patch_size =224, self_patch_num=10, patch_num_hq=30):
         self.patch_size =patch_size
         self.self_patch_num = self_patch_num
+        self.patch_num_hq = patch_num_hq
 
         refpath = os.path.join(root, 'src_imgs')
         refname = getFileName(refpath,'.png')
@@ -231,6 +250,7 @@ class CSIQFolder(data.Dataset):
         self.samples = sample
         self.transform = transform
         self.HQ_diff_content_transform = HQ_diff_content_transform
+
     def __getitem__(self, index):
         """
         Args:
@@ -239,21 +259,28 @@ class CSIQFolder(data.Dataset):
             tuple: (LQ, HQ, HQ_diff_content, target) where target is IQA values of the target LQ.
         """
         LQ_path, HQ_path, target = self.samples[index]
-        HQ_diff_content_path = self.HQ_diff_content[random.randint(0, len(self.HQ_diff_content)-1)]
+        HQ_diff_contents = []
+        for _ in range(self.patch_num_hq):
+            hq_diff_addr = self.HQ_diff_content_paths[random.randint(0, len(self.HQ_diff_content_paths)-1)]
+            HQ_diff_contents.append(pil_loader(hq_diff_addr))
         LQ = pil_loader(LQ_path)
         HQ = pil_loader(HQ_path)
-        HQ_diff_content = pil_loader(HQ_diff_content_path)
         LQ_patches, HQ_patches, HQ_diff_content_patches = [], [], []
+        
+        
+        for i in range(self.patch_num_hq):
+            HQ_diff_content_patch = self.HQ_diff_content_transform(HQ_diff_contents[i])
+            HQ_diff_content_patches.append(HQ_diff_content_patch.unsqueeze(0))
+        
+        
         for _ in range(self.self_patch_num):
-            LQ_patch, HQ_patch = getPairRandomPatch(LQ, HQ, crop_size=self.patch_size)
+            LQ_patch, HQ_patch = getPairRandomPatch(LQ,HQ, crop_size=self.patch_size)
             
             LQ_patch = self.transform(LQ_patch)
             HQ_patch = self.transform(HQ_patch)
-            HQ_diff_content_patch = self.HQ_diff_content_transform(HQ_diff_content)
             
             LQ_patches.append(LQ_patch.unsqueeze(0))
             HQ_patches.append(HQ_patch.unsqueeze(0))
-            HQ_diff_content_patches.append(HQ_diff_content_patch.unsqueeze(0))
         #[self_patch_num, 3, patch_size, patch_size]
         LQ_patches = torch.cat(LQ_patches, 0)
         HQ_patches = torch.cat(HQ_patches, 0)
@@ -333,10 +360,11 @@ class PIQ23Folder(data.Dataset): # mode: all, train80, test20
 
 class TID2013Folder(data.Dataset):
 
-    def __init__(self, root, HQ_diff_content_root, index, transform, HQ_diff_content_transform, patch_num, patch_size =224, self_patch_num=10):
+    def __init__(self, root, HQ_diff_content_root, index, transform, HQ_diff_content_transform, patch_num, patch_size =224, self_patch_num=10, patch_num_hq=30):
         self.patch_size =patch_size
         self.self_patch_num = self_patch_num
-        
+        self.patch_num_hq = patch_num_hq
+
         refpath = os.path.join(root, 'reference_images')
         refname = self._getTIDFileName(refpath,'.bmp.BMP')
         txtpath = os.path.join(root, 'mos_with_names.txt')
@@ -366,10 +394,10 @@ class TID2013Folder(data.Dataset):
                     HQ_path = os.path.join(refpath, refHQ_name)
                     label = labels[item]
                     sample.append((LQ_path, HQ_path, label))
-        self.HQ_diff_content = []
+        self.HQ_diff_content_paths = []
         for HQ_diff_content_img_name in os.listdir(HQ_diff_content_root):
             if HQ_diff_content_img_name[-3:] == 'png' or HQ_diff_content_img_name[-3:] == 'jpg' or HQ_diff_content_img_name[-3:] == 'bmp':
-                self.HQ_diff_content.append(os.path.join(HQ_diff_content_root, HQ_diff_content_img_name))
+                self.HQ_diff_content_paths.append(os.path.join(HQ_diff_content_root, HQ_diff_content_img_name))
        
         self.samples = sample
         self.transform = transform
@@ -391,21 +419,28 @@ class TID2013Folder(data.Dataset):
             tuple: (LQ, HQ, HQ_diff_content, target) where target is IQA values of the target LQ.
         """
         LQ_path, HQ_path, target = self.samples[index]
-        HQ_diff_content_path = self.HQ_diff_content[random.randint(0, len(self.HQ_diff_content)-1)]
+        HQ_diff_contents = []
+        for _ in range(self.patch_num_hq):
+            hq_diff_addr = self.HQ_diff_content_paths[random.randint(0, len(self.HQ_diff_content_paths)-1)]
+            HQ_diff_contents.append(pil_loader(hq_diff_addr))
         LQ = pil_loader(LQ_path)
         HQ = pil_loader(HQ_path)
-        HQ_diff_content = pil_loader(HQ_diff_content_path)
         LQ_patches, HQ_patches, HQ_diff_content_patches = [], [], []
+        
+        
+        for i in range(self.patch_num_hq):
+            HQ_diff_content_patch = self.HQ_diff_content_transform(HQ_diff_contents[i])
+            HQ_diff_content_patches.append(HQ_diff_content_patch.unsqueeze(0))
+        
+        
         for _ in range(self.self_patch_num):
-            LQ_patch, HQ_patch = getPairRandomPatch(LQ, HQ, crop_size=self.patch_size)
+            LQ_patch, HQ_patch = getPairRandomPatch(LQ,HQ, crop_size=self.patch_size)
             
             LQ_patch = self.transform(LQ_patch)
             HQ_patch = self.transform(HQ_patch)
-            HQ_diff_content_patch = self.HQ_diff_content_transform(HQ_diff_content)
             
             LQ_patches.append(LQ_patch.unsqueeze(0))
             HQ_patches.append(HQ_patch.unsqueeze(0))
-            HQ_diff_content_patches.append(HQ_diff_content_patch.unsqueeze(0))
         #[self_patch_num, 3, patch_size, patch_size]
         LQ_patches = torch.cat(LQ_patches, 0)
         HQ_patches = torch.cat(HQ_patches, 0)
@@ -418,9 +453,10 @@ class TID2013Folder(data.Dataset):
         return length
 
 class LIVEChallengeFolder(data.Dataset):
-    def __init__(self, root, HQ_diff_content_root, index, transform, HQ_diff_content_transform, patch_num, patch_size =224, self_patch_num=10):
+    def __init__(self, root, HQ_diff_content_root, index, transform, HQ_diff_content_transform, patch_num, patch_size =224, self_patch_num=10, patch_num_hq=30):
         self.patch_size =patch_size
         self.self_patch_num = self_patch_num
+        self.patch_num_hq = patch_num_hq
 
         LQ_pathes = scipy.io.loadmat(os.path.join(root, 'Data', 'AllImages_release.mat'))
         LQ_pathes = LQ_pathes['AllImages_release']
@@ -451,17 +487,22 @@ class LIVEChallengeFolder(data.Dataset):
             tuple: (LQ, _, HQ_diff_content, target) where target is IQA values of the target LQ.
         """
         LQ_path, target = self.samples[index]
-        HQ_diff_content_path = self.HQ_diff_content_paths[random.randint(0, len(self.HQ_diff_content_paths)-1)]
+        HQ_diff_contents = []
+        for _ in range(self.patch_num_hq):
+            hq_diff_addr = self.HQ_diff_content_paths[random.randint(0, len(self.HQ_diff_content_paths)-1)]
+            HQ_diff_contents.append(pil_loader(hq_diff_addr))
         LQ = pil_loader(LQ_path)
-        HQ_diff_content = pil_loader(HQ_diff_content_path)
+
         LQ_patches, HQ_diff_content_patches = [], []
-        for _ in range(self.self_patch_num):
-            LQ_patch = self.HQ_diff_content_transform(LQ)
-            HQ_diff_content_patch = self.HQ_diff_content_transform(HQ_diff_content)
-            
-            LQ_patches.append(LQ_patch.unsqueeze(0))
+
+        for i in range(self.patch_num_hq):
+            HQ_diff_content_patch = self.HQ_diff_content_transform(HQ_diff_contents[i])
             HQ_diff_content_patches.append(HQ_diff_content_patch.unsqueeze(0))
-        #[self_patch_num, 3, patch_size, patch_size]
+        
+        for _ in range(self.self_patch_num):
+            LQ_patch = self.HQ_diff_content_transform(LQ)            
+            LQ_patches.append(LQ_patch.unsqueeze(0))
+
         LQ_patches = torch.cat(LQ_patches, 0)
         HQ_diff_content_patches = torch.cat(HQ_diff_content_patches, 0)
 
@@ -539,10 +580,10 @@ class BIDChallengeFolder(data.Dataset):
         return length
 
 class Koniq_10kFolder(data.Dataset):
-    def __init__(self, root, HQ_diff_content_root, index, transform, HQ_diff_content_transform, patch_num, patch_size =224, self_patch_num=10):
+    def __init__(self, root, HQ_diff_content_root, index, transform, HQ_diff_content_transform, patch_num, patch_size =224, self_patch_num=10, patch_num_hq=30):
         self.patch_size =patch_size
         self.self_patch_num = self_patch_num
-
+        self.patch_num_hq = patch_num_hq
         imgname = []
         mos_all = []
         csv_file = os.path.join(root, 'koniq10k_scores_and_distributions.csv')
@@ -576,17 +617,22 @@ class Koniq_10kFolder(data.Dataset):
             tuple: (LQ, _, HQ_diff_content, target) where target is IQA values of the target LQ.
         """
         LQ_path, target = self.samples[index]
-        HQ_diff_content_path = self.HQ_diff_content_paths[random.randint(0, len(self.HQ_diff_content_paths)-1)]
+        HQ_diff_contents = []
+        for _ in range(self.patch_num_hq):
+            hq_diff_addr = self.HQ_diff_content_paths[random.randint(0, len(self.HQ_diff_content_paths)-1)]
+            HQ_diff_contents.append(pil_loader(hq_diff_addr))
         LQ = pil_loader(LQ_path)
-        HQ_diff_content = pil_loader(HQ_diff_content_path)
+
         LQ_patches, HQ_diff_content_patches = [], []
-        for _ in range(self.self_patch_num):
-            LQ_patch = self.HQ_diff_content_transform(LQ)
-            HQ_diff_content_patch = self.HQ_diff_content_transform(HQ_diff_content)
-            
-            LQ_patches.append(LQ_patch.unsqueeze(0))
+
+        for i in range(self.patch_num_hq):
+            HQ_diff_content_patch = self.HQ_diff_content_transform(HQ_diff_contents[i])
             HQ_diff_content_patches.append(HQ_diff_content_patch.unsqueeze(0))
-        #[self_patch_num, 3, patch_size, patch_size]
+        
+        for _ in range(self.self_patch_num):
+            LQ_patch = self.HQ_diff_content_transform(LQ)            
+            LQ_patches.append(LQ_patch.unsqueeze(0))
+
         LQ_patches = torch.cat(LQ_patches, 0)
         HQ_diff_content_patches = torch.cat(HQ_diff_content_patches, 0)
 

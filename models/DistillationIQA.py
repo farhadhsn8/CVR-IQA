@@ -688,7 +688,45 @@ class DistillationIQANet_org_or_stackingV2(nn.Module):
         return multi_scale_hq_feature
         
 
-      
+    def find_best_matches(self, aaaa, bbbb , bs = 32 , pn = 10):
+        """
+        Find the best match for each tensor in a from the tensor b.
+        
+        Args:
+            a (torch.Tensor): Tensor of shape [320, 512, 28, 28].
+            b (torch.Tensor): Tensor of shape [960, 512, 28, 28].
+            
+        Returns:
+            torch.Tensor: Customized tensor from b based on best matches.
+        """
+        a = aaaa[1] + 0
+        b = bbbb[1] + 0
+        customized_b0 , customized_b1 ,customized_b2,customized_b3 = torch.empty_like(aaaa[0]) , torch.empty_like(aaaa[1]),torch.empty_like(aaaa[2]),torch.empty_like(aaaa[3])
+        sims = []
+        idxs = []
+        for i in range(a.size(0)):
+            max_sim = -10
+            max_idx = 0
+            for j in range(int((i//pn) * 30),int((i//pn) * 30) + 30 ):
+                # Calculate the similarity (e.g., using cosine similarity)
+                similarity = F.cosine_similarity(a[i].view(1,-1), b[j].view(1,-1))[0].item()
+                if similarity >= max_sim:
+                    max_sim = similarity
+                    max_idx = j
+                    customized_b0[i] = bbbb[0][j]
+                    customized_b1[i] = bbbb[1][j]
+                    customized_b2[i] = bbbb[2][j]
+                    customized_b3[i] = bbbb[3][j]
+                # print(similarity)
+                
+                # # Find the index of the best match in b
+                # best_match_index = similarity.argmax()
+            sims.append(max_sim)
+            idxs.append(max_idx)
+                # # Store the best match in the customized_b tensor
+                # customized_b[i] = b[best_match_index]
+        
+        return [customized_b0, customized_b1, customized_b2, customized_b3]
     
 
 
@@ -696,14 +734,17 @@ class DistillationIQANet_org_or_stackingV2(nn.Module):
     def forward(self, LQ_patches, refHQ_patches):
         device = LQ_patches.device
         b, p, c, h, w = LQ_patches.shape
+        b1, p1, c1, h1, w1 = refHQ_patches.shape
         LQ_patches_reshape = LQ_patches.view(b*p, c, h, w)
-        refHQ_patches_reshape = refHQ_patches.view(b*p, c, h, w)
+        refHQ_patches_reshape = refHQ_patches.view(b1*p1, c1, h1, w1)
 
         # [b*p, 256, 56, 56], [b*p, 512, 28, 28], [b*p, 1024, 14, 14], [b*p, 2048, 7, 7]
         lq_lda_features = self.feature_extractor(LQ_patches_reshape)
         refHQ_lda_features = self.feature_extractor(refHQ_patches_reshape)
 
-        # encode_diff_feature, encode_lq_feature, feature = [], [], []
+        if self.stacking_mode:
+            refHQ_lda_features = self.find_best_matches(lq_lda_features, refHQ_lda_features,b, p)
+
         w_h_features = [56,28,14,7]
         c = 0
         multi_scale_diff_feature, multi_scale_lq_feature, feature = [], [], []

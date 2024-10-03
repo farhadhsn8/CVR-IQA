@@ -7,7 +7,7 @@ from option_train_DistillationIQA import set_args, check_args
 from scipy import stats
 import numpy as np
 from tools import convert_obj_score
-from models.DistillationIQA import DistillationIQANet 
+from models.DistillationIQA import DistillationIQANet_org_or_stackingV2 
 
 img_num = {
         'kadid10k': list(range(0,10125)),
@@ -49,14 +49,14 @@ class DistillationIQASolver(object):
             f.close()
         
         #model
-        self.teacherNet = DistillationIQANet(self_patch_num=config.self_patch_num, distillation_layer=config.distillation_layer)
+        self.teacherNet = DistillationIQANet_org_or_stackingV2(self_patch_num=config.self_patch_num, distillation_layer=config.distillation_layer)
         if config.teacherNet_model_path:
             self.teacherNet._load_state_dict(torch.load(config.teacherNet_model_path))
         self.teacherNet = self.teacherNet.to(self.device)
         self.teacherNet.train(False)
 
       
-        self.studentNet = DistillationIQANet(self_patch_num=config.self_patch_num, distillation_layer=config.distillation_layer , stacking_mode=config.feature_stacking)
+        self.studentNet = DistillationIQANet_org_or_stackingV2(self_patch_num=config.self_patch_num, distillation_layer=config.distillation_layer , stacking_mode=config.feature_stacking)
 
         if config.studentNet_model_path:
             self.studentNet._load_state_dict(torch.load(config.studentNet_model_path))
@@ -84,13 +84,13 @@ class DistillationIQASolver(object):
         # test_loader_LIVE = DataLoader('live', folder_path['live'], config.ref_test_dataset_path, img_num['live'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
         # test_loader_CSIQ = DataLoader('csiq', folder_path['csiq'], config.ref_test_dataset_path, img_num['csiq'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
         test_loader_TID = DataLoader('tid2013', folder_path['tid2013'], config.ref_test_dataset_path, img_num['tid2013'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
-        # test_loader_Koniq = DataLoader('koniq-10k', folder_path['koniq-10k'], config.ref_test_dataset_path, img_num['koniq-10k'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
+        test_loader_livec = DataLoader('livec', folder_path['livec'], config.ref_test_dataset_path, img_num['livec'], config.patch_size, config.test_patch_num, istrain=False, self_patch_num=config.self_patch_num)
         
         self.train_data = train_loader.get_dataloader()
         # self.test_data_LIVE = test_loader_LIVE.get_dataloader()
         # self.test_data_CSIQ = test_loader_CSIQ.get_dataloader()
         self.test_data_TID = test_loader_TID.get_dataloader()
-        # self.test_data_Koniq = test_loader_Koniq.get_dataloader()
+        self.test_data_livec = test_loader_livec.get_dataloader()
 
 
     def train(self):
@@ -139,7 +139,7 @@ class DistillationIQASolver(object):
                 with torch.cuda.amp.autocast():
                     t_encode_diff_inner_feature, t_decode_inner_feature, _ = self.teacherNet(LQ_patches, refHQ_patches)
                     s_encode_diff_inner_feature, s_decode_inner_feature, pred = self.studentNet(LQ_patches, ref_patches)
-                
+
                     pred_scores = pred_scores + pred.cpu().tolist()
                     gt_scores = gt_scores + label.cpu().tolist()
                     pred_loss = self.l1_loss(pred.squeeze(), label.float().detach())
@@ -167,8 +167,14 @@ class DistillationIQASolver(object):
             train_acc.append(train_srcc)
             # test_LIVE_srcc, test_LIVE_plcc, test_LIVE_krcc = self.test(self.test_data_LIVE)
             # test_CSIQ_srcc, test_CSIQ_plcc, test_CSIQ_krcc = self.test(self.test_data_CSIQ)
-            if t % 5 ==0:
+            if t % 3 ==0:
                 test_TID_srcc, test_TID_plcc, test_TID_krcc = self.test(self.test_data_TID)
+                print('%d:TID\t%4.3f\t\t%4.4f\t\t%4.4f\t\t%4.4f\t\t%4.4f \n' %
+                    (t, sum(epoch_loss) / len(epoch_loss), train_srcc, test_TID_srcc, test_TID_plcc, test_TID_krcc))
+                test_livec_srcc, test_livec_plcc, test_livec_krcc = self.test(self.test_data_livec)
+                print('%d:clive\t%4.3f\t\t%4.4f\t\t%4.4f\t\t%4.4f\t\t%4.4f \n' %
+                    (t, sum(epoch_loss) / len(epoch_loss), train_srcc, test_livec_srcc, test_livec_plcc, test_livec_krcc))
+
             test_acc.append(test_TID_srcc)
             # test_Koniq_srcc, test_Koniq_plcc, test_Koniq_krcc = solver.test(solver.test_data_Koniq)
 
