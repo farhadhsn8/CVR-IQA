@@ -1,0 +1,15 @@
+image-quality-assessment
+no-reference-iqa
+full-reference-iqa
+knowledge-distillation
+pytorch
+computer-vision
+mlp-mixer
+resnet
+deep-learning
+kadid10k
+live-challenge
+tid2013
+csiq
+koniq10k
+ntire

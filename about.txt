@@ -1,0 +1,1 @@
+Content-variant reference IQA via knowledge distillation: a full-reference teacher transfers high-quality distribution priors to a student that needs only a non-pixel-aligned / content-variant reference, so quality scores no longer require a pixel-perfect reference image.
