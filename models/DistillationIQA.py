@@ -773,6 +773,9 @@ class DistillationIQANet_org_or_stackingV2(nn.Module):
 
 
 
+# Backward-compatible alias for code/checkpoints referencing the original name.
+DistillationIQANet = DistillationIQANet_org_or_stackingV2
+
 if __name__ == "__main__":
     net = ResNetBackbone()
     x = torch.rand((1,3,224,224))

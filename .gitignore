@@ -1,28 +1,51 @@
-*.tar
-
-*.jpg
-*.jpeg
-*.png
-*.bmp
-*.BMP
-*.zip
-*.tiff
-*.tif
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-*.rar
-*.npy
-
-*.pt
-*.ptc
-*.pth
-=======
-*.rar
-cvr-iqa.pdf
->>>>>>> Stashed changes
-=======
-*.rar
-
+# Byte-compiled / cache
 __pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+.idea/
 .vscode/
->>>>>>> Stashed changes
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Datasets (downloaded separately, see README)
+dataset/
+
+# Pretrained weights and checkpoints
+*.pth
+*.pt
+*.ckpt
+model_zoo/*.pt
+model_zoo/*.pth
+
+# Training artifacts
+checkpoint_*/
+logs/
+
+# Experiment / analysis scratch
+_analyze/
+_NTIRE_kit/
+S13/
+s14/
+S16_test_spaq/
+S17_variance_test/
+S18_variance_test_on_clive/
+S19_visualizatin_features/
+S20_visualizatin_features_sub/
+
+# Local results
+pred_*.txt
+gt_*.txt
+list_file.txt
+
+# Stray local experiment artifacts
+0_vvqxbutt.txt
+1_oolvpckm.txt
+cvr-iqa.pdf
+i.ipynb
