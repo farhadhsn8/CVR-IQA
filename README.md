@@ -179,19 +179,7 @@ print(score)
 > Note: quality scores live on an arbitrary scale; fit to your MOS range (logistic
 > mapping in `tools.py`) before reporting them on a reference scale.
 
----
 
-## Citation
-
-If you find this code useful, please cite:
-
-```bibtex
-@article{yin2022content,
-  title={Content-Variant Reference Image Quality Assessment via Knowledge Distillation},
-  author={Yin, Guanghao and Wang, Wei and Yuan, Zehuan and Han, Chuchu and Ji, Wei and Sun, Shouqian and Wang, Changhu},
-  journal={arXiv preprint arXiv:2202.13123},
-  year={2022}
-}
 ```
 
 ---
@@ -201,8 +189,4 @@ If you find this code useful, please cite:
 The framework builds on [CVRKD-IQA](https://github.com/guanghaoyin/CVRKD-IQA) and
 [HyperIQA](https://github.com/SSL92/hyperIQA). Please check their licenses before reuse.
 
----
 
-## License
-
-[MIT](LICENSE) (original copyright held by the CVRKD-IQA authors).
