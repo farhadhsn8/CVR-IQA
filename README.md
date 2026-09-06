@@ -180,9 +180,7 @@ print(score)
 > mapping in `tools.py`) before reporting them on a reference scale.
 
 
-```
 
----
 
 ## Acknowledgements
 
